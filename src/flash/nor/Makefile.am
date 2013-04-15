@@ -14,7 +14,6 @@ NOR_DRIVERS = \
 	at91sam7.c \
 	avrf.c \
 	cfi.c \
-	efm32.c \
 	em357.c \
 	faux.c \
 	lpc2000.c \
