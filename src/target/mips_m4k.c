@@ -91,7 +91,8 @@ static int mips_m4k_debug_entry(struct target *target)
 	mips_ejtag_config_step(ejtag_info, 0);
 
 	/* make sure break unit configured */
-	mips32_configure_break_unit(target);
+	if (ejtag_info->ejtag_version > EJTAG_VERSION_20)
+		mips32_configure_break_unit(target);
 
 	/* attempt to find halt reason */
 	mips_m4k_examine_debug_reason(target);
