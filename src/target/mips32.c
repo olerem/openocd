@@ -509,6 +509,8 @@ static int mips32_configure_dbs(struct target *target)
 		return retval;
 
 	mips32->num_data_bpoints = (bpinfo >> 24) & 0x0F;
+
+	LOG_INFO("hardware datapoints: %x, (%x)\n", mips32->num_data_bpoints, bpinfo);
 	mips32->num_data_bpoints_avail = mips32->num_data_bpoints;
 	mips32->data_break_list = calloc(mips32->num_data_bpoints,
 		sizeof(struct mips32_comparator));
