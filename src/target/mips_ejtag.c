@@ -422,11 +422,21 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 	}
 
 
+	/* FIXME: disable DMA on LEXRA untill it is fixed */
+	if (ejtag_info->ejtag_variant == LEXRA)
+		ejtag_info->impcode |= EJTAG_IMP_NODMA;
+
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
 		LOG_DEBUG("EJTAG: DMA Access Mode Support Enabled");
 
-	/* set initial state for ejtag control reg */
-	ejtag_info->ejtag_ctrl = EJTAG_CTRL_ROCC | EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN | EJTAG_CTRL_SETDEV;
+	ejtag_info->ejtag_ctrl = EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN;
+
+	if (ejtag_info->ejtag_variant == MIPS)
+		ejtag_info->ejtag_ctrl |= EJTAG_CTRL_SETDEV;
+
+	if (ejtag_info->ejtag_version != EJTAG_VERSION_20)
+		ejtag_info->ejtag_ctrl |= EJTAG_CTRL_ROCC;
+
 	ejtag_info->fast_access_save = -1;
 
 	mips_ejtag_init_mmr(ejtag_info);
