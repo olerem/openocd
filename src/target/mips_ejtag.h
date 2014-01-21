@@ -97,12 +97,33 @@
 #define EJTAG_DEBUG_DM			(1 << 30)
 #define EJTAG_DEBUG_DBD			(1 << 31)
 
-/* implementaion register bits */
+/* implementaion MIPS register bits */
 #define EJTAG_IMP_R3K			(1 << 28)
 #define EJTAG_IMP_DINT			(1 << 24)
 #define EJTAG_IMP_NODMA			(1 << 14)
 #define EJTAG_IMP_MIPS16		(1 << 16)
 #define EJTAG_DCR_MIPS64		(1 << 0)
+
+/* implementaion Lexra register bits */
+/* 29 - 1’b1 - Lexra Internal Trace Buffer implemented */
+/* 24:25 - 2’b00- No profiling support */
+#define EJTAG_LEXRA_IMP_SDBBP		(1 << 23) /* 1’b1 - sdbbp is Special2
+						     Opcode */
+/* 20 - 1’b0 - Complex Breaks not supported */
+#define EJTAG_LEXRA_IMP_EADDR_36BIT		(1 << 19) /* 1’b1 - EJTAG_ADDR > 32 bits
+						   wide */
+/* 18 - 1’b0 - DCache does not keep DMA coherent */
+/* 17 - 1’b0 - ICache does not keep DMA coherent */
+#define EJTAG_LEXRA_IMP_MIPS16		(1 << 16)
+#define EJTAG_LEXRA_IMP_NODMA		(1 << 14)
+/* 11:13 external PC trace */
+/* 8:10 external PC trace */
+#define EJTAG_LEXRA_IMP_NOPB		(1 << 7) /* no processor breaks */
+#define EJTAG_LEXRA_IMP_NODB		(1 << 6) /* no data breaks */
+#define EJTAG_LEXRA_IMP_NOIB		(1 << 5) /* no instruction breaks
+						    implementeed */
+#define EJTAG_LEXRA_IMP_MIPS32		(1 << 0)
+
 
 /* Debug Control Register DCR */
 #define EJTAG_DCR				0xFF300000
@@ -154,6 +175,11 @@
 #define EJTAG_VERSION_41		4
 #define EJTAG_VERSION_51		5
 
+enum ejtag_variant {
+	MIPS,
+	LEXRA
+};
+
 struct mips_ejtag {
 	struct jtag_tap *tap;
 	uint32_t impcode;
@@ -165,6 +191,7 @@ struct mips_ejtag {
 	unsigned scan_delay;
 	int mode;
 	unsigned int ejtag_version;
+	enum ejtag_variant ejtag_variant;
 
 	/* Memory-Mapped Registers. This addresses are not same on different
 	 * EJTAG versions. */
