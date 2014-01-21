@@ -1099,6 +1099,7 @@ static int mips_m4k_examine(struct target *target)
 	struct mips_m4k_common *mips_m4k = target_to_m4k(target);
 	struct mips_ejtag *ejtag_info = &mips_m4k->mips32.ejtag_info;
 	uint32_t idcode = 0;
+	ejtag_info->ejtag_variant = MIPS;
 
 	if (!target_was_examined(target)) {
 		retval = mips_ejtag_get_idcode(ejtag_info, &idcode);
@@ -1112,6 +1113,9 @@ static int mips_m4k_examine(struct target *target)
 			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
 			LOG_DEBUG("PIC32MX Detected - using EJTAG Interface");
 			mips_m4k->is_pic32mx = true;
+		} else if (idcode == 0x1528000d) {
+			LOG_DEBUG("Lexra CPU Detected");
+			ejtag_info->ejtag_variant = LEXRA;
 		}
 	}
 
