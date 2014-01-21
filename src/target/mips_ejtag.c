@@ -343,6 +343,34 @@ static void mips_ejtag_init_mmr(struct mips_ejtag *ejtag_info)
 	}
 }
 
+static void mips_print_imp(struct mips_ejtag *ejtag_info)
+{
+	LOG_DEBUG("EJTAG: features:%s%s%s%s%s%s%s",
+		ejtag_info->impcode & EJTAG_IMP_R3K ? " R3k" : " R4k",
+		ejtag_info->impcode & EJTAG_IMP_DINT ? " DINT" : "",
+		ejtag_info->impcode & (1 << 22) ? " ASID_8" : "",
+		ejtag_info->impcode & (1 << 21) ? " ASID_6" : "",
+		ejtag_info->impcode & EJTAG_IMP_MIPS16 ? " MIPS16" : "",
+		ejtag_info->impcode & EJTAG_IMP_NODMA ? " noDMA" : " DMA",
+		ejtag_info->impcode & EJTAG_DCR_MIPS64  ? " MIPS64" : " MIPS32");
+}
+
+static void lexra_print_imp(struct mips_ejtag *ejtag_info)
+{
+	LOG_DEBUG("EJTAG: features:%s%s%s%s%s%s",
+		ejtag_info->impcode & EJTAG_IMP_R3K ? " R3k" : " R4k",
+		ejtag_info->impcode & (1 << 22) ? " ASID_8" : "",
+		ejtag_info->impcode & (1 << 21) ? " ASID_6" : "",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_MIPS16 ? " MIPS16" : "",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_NODMA ? " noDMA" : " DMA",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_MIPS32  ? " MIPS64" : " MIPS32");
+	LOG_DEBUG("EJTAG: features:%s%s%s%s%s",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_SDBBP ? " SDBBP" : "",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_EADDR_36BIT ? " EADDR_36bit" : " EADDR_32bit",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_NOPB ? " noPB" : "",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_NODB ? " noDB" : "",
+		ejtag_info->impcode & EJTAG_LEXRA_IMP_NOIB ? " noIB" : "");
+}
 
 int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 {
@@ -379,14 +407,20 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 			LOG_DEBUG("EJTAG: Unknown Version Detected");
 			break;
 	}
-	LOG_DEBUG("EJTAG: features:%s%s%s%s%s%s%s",
-		ejtag_info->impcode & EJTAG_IMP_R3K ? " R3k" : " R4k",
-		ejtag_info->impcode & EJTAG_IMP_DINT ? " DINT" : "",
-		ejtag_info->impcode & (1 << 22) ? " ASID_8" : "",
-		ejtag_info->impcode & (1 << 21) ? " ASID_6" : "",
-		ejtag_info->impcode & EJTAG_IMP_MIPS16 ? " MIPS16" : "",
-		ejtag_info->impcode & EJTAG_IMP_NODMA ? " noDMA" : " DMA",
-		ejtag_info->impcode & EJTAG_DCR_MIPS64  ? " MIPS64" : " MIPS32");
+	switch (ejtag_info->ejtag_variant) {
+		case MIPS:
+			LOG_DEBUG("EJTAG: MIPS Detected");
+			mips_print_imp(ejtag_info);
+			break;
+		case LEXRA:
+			LOG_DEBUG("EJTAG: LEXRA Detected");
+			lexra_print_imp(ejtag_info);
+			break;
+		default:
+			LOG_DEBUG("EJTAG: Unknown Variant Detected");
+			break;
+	}
+
 
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
 		LOG_DEBUG("EJTAG: DMA Access Mode Support Enabled");
