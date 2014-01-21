@@ -232,6 +232,7 @@ int mips_ejtag_config_step(struct mips_ejtag *ejtag_info, int enable_step)
 	pracc_add(&ctx, 0, MIPS32_B(NEG16((ctx.code_count + 1))));			/* jump to start */
 	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(ejtag_info->reg8)));	/* restore lower 16 bits of $8 */
 
+	LOG_DEBUG(" ");
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
 exit:
 	pracc_queue_free(&ctx);
@@ -295,6 +296,7 @@ int mips_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
 	uint32_t instr = MIPS32_DRET;
 	struct pracc_queue_info ctx = {.max_code = 1, .pracc_list = &instr, .code_count = 1, .store_count = 0};
 
+	LOG_DEBUG(" ");
 	/* execute our dret instruction */
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
 
