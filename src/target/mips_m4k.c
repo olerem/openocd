@@ -49,7 +49,6 @@ static int mips_m4k_halt(struct target *target);
 static int mips_m4k_bulk_write_memory(struct target *target, uint32_t address,
 		uint32_t count, const uint8_t *buffer);
 
-#if 0
 static int mips_m4k_examine_debug_reason(struct target *target)
 {
 	struct mips32_common *mips32 = target_to_mips32(target);
@@ -90,7 +89,6 @@ static int mips_m4k_examine_debug_reason(struct target *target)
 
 	return ERROR_OK;
 }
-#endif
 
 static int mips_m4k_debug_entry(struct target *target)
 {
@@ -103,10 +101,10 @@ static int mips_m4k_debug_entry(struct target *target)
 	//mips_ejtag_config_step(ejtag_info, 0);
 
 	/* make sure break unit configured */
-	//mips32_configure_break_unit(target);
+	mips32_configure_break_unit(target);
 
 	/* attempt to find halt reason */
-	//#mips_m4k_examine_debug_reason(target);
+	mips_m4k_examine_debug_reason(target);
 
 	/* default to mips32 isa, it will be changed below if required */
 	mips32->isa_mode = MIPS32_ISA_MIPS32;
