@@ -193,6 +193,7 @@ static int mips_m4k_poll(struct target *target)
 	if (retval != ERROR_OK)
 		return retval;
 
+	LOG_DEBUG("%x (%i)", ejtag_ctrl, (ejtag_ctrl & EJTAG_CTRL_BRKST) ? 1 : 0);
 	/* clear this bit before handling polling
 	 * as after reset registers will read zero */
 	if (ejtag_ctrl & EJTAG_CTRL_ROCC) {
