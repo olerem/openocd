@@ -102,13 +102,13 @@
  * this registers supported only by EJTAG v2.0.
  * Lexra or BMIPS would mean, that this bit differs from official EJATG spec. */
 /* v2.0(Lexra) 29 - 1’b1 - Lexra Internal Trace Buffer implemented */
-#define EJTAG_IMP_R3K			(1 << 28)
+#define EJTAG_V26_IMP_R3K			(1 << 28)
 /* v2.0 - 24:25 - 2’b00- No profiling support */
 #define EJTAG_V26_IMP_DINT		(1 << 24)
 #define EJTAG_V20_IMP_SDBBP		(1 << 23) /* 1’b1 - sdbbp is Special2
 						     Opcode */
 /* v2.0 - 20 - 1’b0 - Complex Breaks not supported */
-#define EJTAG_V20_IMP_EADDR_36BIT	(1 << 19) /* 1’b1 - EJTAG_ADDR > 32 bits
+#define EJTAG_V20_IMP_EADDR_NO32BIT	(1 << 19) /* 1’b1 - EJTAG_ADDR > 32 bits
 						   wide */
 #define EJTAG_IMP_NODMA			(1 << 14)
 /* v2.0 - 18 1’b0 - DCache does not keep DMA coherent */
@@ -120,6 +120,9 @@
 #define EJTAG_V20_IMP_NODB		(1 << 6) /* no data breaks */
 #define EJTAG_V20_IMP_NOIB		(1 << 5) /* no instruction breaks
 						    implementeed */
+/* v2.0 - 1:4 Number of Break Channels. */
+#define EJTAG_V20_IMP_BCHANNELS_MASK	0xf
+#define EJTAG_V20_IMP_BCHANNELS_SHIFT	1
 #define EJTAG_DCR_MIPS64		(1 << 0)
 
 /* Debug Control Register DCR */
