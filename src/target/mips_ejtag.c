@@ -347,22 +347,25 @@ static void ejtag_v20_print_imp(struct mips_ejtag *ejtag_info)
 {
 	LOG_DEBUG("EJTAG v2.0: features:%s%s%s%s%s",
 		ejtag_info->impcode & EJTAG_V20_IMP_SDBBP ? " SDBBP_SPECIAL2" : " SDBBP",
-		ejtag_info->impcode & EJTAG_V20_IMP_EADDR_36BIT ? " EADDR_36bit" : " EADDR_32bit",
+		ejtag_info->impcode & EJTAG_V20_IMP_EADDR_NO32BIT ? " EADDR>32bit" : " EADDR=32bit",
 		ejtag_info->impcode & EJTAG_V20_IMP_NOPB ? " noPB" : "",
 		ejtag_info->impcode & EJTAG_V20_IMP_NODB ? " noDB" : "",
 		ejtag_info->impcode & EJTAG_V20_IMP_NOIB ? " noIB" : "");
+	LOG_DEBUG("EJTAG v2.0: Break Channels: %i",
+		(ejtag_info->impcode >> EJTAG_V20_IMP_BCHANNELS_SHIFT) &
+		EJTAG_V20_IMP_BCHANNELS_MASK);
 }
 
 static void ejtag_v26_print_imp(struct mips_ejtag *ejtag_info)
 {
-	LOG_DEBUG("EJTAG v2.6: features:%s",
+	LOG_DEBUG("EJTAG v2.6: features:%s%s",
+		ejtag_info->impcode & EJTAG_V26_IMP_R3K ? " R3k" : " R4k",
 		ejtag_info->impcode & EJTAG_V26_IMP_DINT ? " DINT" : "");
 }
 
 static void ejtag_main_print_imp(struct mips_ejtag *ejtag_info)
 {
-	LOG_DEBUG("EJTAG main: features:%s%s%s%s%s%s",
-		ejtag_info->impcode & EJTAG_IMP_R3K ? " R3k" : " R4k",
+	LOG_DEBUG("EJTAG main: features:%s%s%s%s%s",
 		ejtag_info->impcode & (1 << 22) ? " ASID_8" : "",
 		ejtag_info->impcode & (1 << 21) ? " ASID_6" : "",
 		ejtag_info->impcode & EJTAG_IMP_MIPS16 ? " MIPS16" : "",
