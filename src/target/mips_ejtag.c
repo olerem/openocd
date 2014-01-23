@@ -341,6 +341,50 @@ static void mips_ejtag_init_mmr(struct mips_ejtag *ejtag_info)
 	}
 }
 
+static void ejtag_v20_print_imp(struct mips_ejtag *ejtag_info)
+{
+	LOG_DEBUG("EJTAG v2.0: features:%s%s%s%s%s",
+		ejtag_info->impcode & EJTAG_V20_IMP_SDBBP ? " SDBBP_SPECIAL2" : " SDBBP",
+		ejtag_info->impcode & EJTAG_V20_IMP_EADDR_NO32BIT ? " EADDR>32bit" : " EADDR=32bit",
+		ejtag_info->impcode & EJTAG_V20_IMP_NOPB ? " noPB" : "",
+		ejtag_info->impcode & EJTAG_V20_IMP_NODB ? " noDB" : "",
+		ejtag_info->impcode & EJTAG_V20_IMP_NOIB ? " noIB" : "");
+	LOG_DEBUG("EJTAG v2.0: Break Channels: %i",
+		(ejtag_info->impcode >> EJTAG_V20_IMP_BCHANNELS_SHIFT) &
+		EJTAG_V20_IMP_BCHANNELS_MASK);
+}
+
+static void ejtag_v26_print_imp(struct mips_ejtag *ejtag_info)
+{
+	LOG_DEBUG("EJTAG v2.6: features:%s%s",
+		ejtag_info->impcode & EJTAG_V26_IMP_R3K ? " R3k" : " R4k",
+		ejtag_info->impcode & EJTAG_V26_IMP_DINT ? " DINT" : "");
+}
+
+static void ejtag_main_print_imp(struct mips_ejtag *ejtag_info)
+{
+	LOG_DEBUG("EJTAG main: features:%s%s%s%s%s",
+		ejtag_info->impcode & (1 << 22) ? " ASID_8" : "",
+		ejtag_info->impcode & (1 << 21) ? " ASID_6" : "",
+		ejtag_info->impcode & EJTAG_IMP_MIPS16 ? " MIPS16" : "",
+		ejtag_info->impcode & EJTAG_IMP_NODMA ? " noDMA" : " DMA",
+		ejtag_info->impcode & EJTAG_DCR_MIPS64  ? " MIPS64" : " MIPS32");
+
+	switch (ejtag_info->ejtag_version) {
+		case EJTAG_VERSION_20:
+			ejtag_v20_print_imp(ejtag_info);
+			break;
+		case EJTAG_VERSION_25:
+		case EJTAG_VERSION_26:
+		case EJTAG_VERSION_31:
+		case EJTAG_VERSION_41:
+		case EJTAG_VERSION_51:
+			ejtag_v26_print_imp(ejtag_info);
+			break;
+		default:
+			break;
+	}
+}
 
 int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 {
@@ -377,14 +421,7 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 			LOG_DEBUG("EJTAG: Unknown Version Detected");
 			break;
 	}
-	LOG_DEBUG("EJTAG: features:%s%s%s%s%s%s%s",
-		ejtag_info->impcode & EJTAG_IMP_R3K ? " R3k" : " R4k",
-		ejtag_info->impcode & EJTAG_IMP_DINT ? " DINT" : "",
-		ejtag_info->impcode & (1 << 22) ? " ASID_8" : "",
-		ejtag_info->impcode & (1 << 21) ? " ASID_6" : "",
-		ejtag_info->impcode & EJTAG_IMP_MIPS16 ? " MIPS16" : "",
-		ejtag_info->impcode & EJTAG_IMP_NODMA ? " noDMA" : " DMA",
-		ejtag_info->impcode & EJTAG_DCR_MIPS64  ? " MIPS64" : " MIPS32");
+	ejtag_main_print_imp(ejtag_info);
 
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
 		LOG_DEBUG("EJTAG: DMA Access Mode Support Enabled");
