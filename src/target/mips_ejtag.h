@@ -175,6 +175,11 @@
 #define EJTAG_VERSION_41		4
 #define EJTAG_VERSION_51		5
 
+enum ejtag_variant {
+	MIPS,
+	LEXRA
+};
+
 struct mips_ejtag {
 	struct jtag_tap *tap;
 	uint32_t impcode;
@@ -186,6 +191,7 @@ struct mips_ejtag {
 	unsigned scan_delay;
 	int mode;
 	unsigned int ejtag_version;
+	enum ejtag_variant ejtag_variant;
 
 	/* Memory-Mapped Registers. This addresses are not same on different
 	 * EJTAG versions. */
