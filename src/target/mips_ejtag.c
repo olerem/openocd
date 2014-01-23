@@ -435,6 +435,10 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 
 	ejtag_main_print_imp(ejtag_info);
 
+	/* FIXME: disable DMA on LEXRA untill it is fixed */
+	if (ejtag_info->ejtag_variant == LEXRA)
+		ejtag_info->impcode |= EJTAG_IMP_NODMA;
+
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
 		LOG_DEBUG("EJTAG: DMA Access Mode Support Enabled");
 
