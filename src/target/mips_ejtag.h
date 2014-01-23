@@ -97,11 +97,32 @@
 #define EJTAG_DEBUG_DM			(1 << 30)
 #define EJTAG_DEBUG_DBD			(1 << 31)
 
-/* implementaion register bits */
-#define EJTAG_IMP_R3K			(1 << 28)
-#define EJTAG_IMP_DINT			(1 << 24)
+/* implementaion MIPS register bits.
+ * Registers marked with V20 or v2.0 mean that,
+ * this registers supported only by EJTAG v2.0.
+ * Lexra or BMIPS would mean, that this bit differs from official EJATG spec. */
+/* v2.0(Lexra) 29 - 1’b1 - Lexra Internal Trace Buffer implemented */
+#define EJTAG_V26_IMP_R3K			(1 << 28)
+/* v2.0 - 24:25 - 2’b00- No profiling support */
+#define EJTAG_V26_IMP_DINT		(1 << 24)
+#define EJTAG_V20_IMP_SDBBP		(1 << 23) /* 1’b1 - sdbbp is Special2
+						     Opcode */
+/* v2.0 - 20 - 1’b0 - Complex Breaks not supported */
+#define EJTAG_V20_IMP_EADDR_NO32BIT	(1 << 19) /* 1’b1 - EJTAG_ADDR > 32 bits
+						   wide */
 #define EJTAG_IMP_NODMA			(1 << 14)
+/* v2.0 - 18 1’b0 - DCache does not keep DMA coherent */
+/* v2.0 - 17 1’b0 - ICache does not keep DMA coherent */
 #define EJTAG_IMP_MIPS16		(1 << 16)
+/* v2.0 - 11:13 external PC trace. Trace PC Width. */
+/* v2.0 - 8:10 external PC trace. PCST Width and DCLK Division Factor */
+#define EJTAG_V20_IMP_NOPB		(1 << 7) /* no processor breaks */
+#define EJTAG_V20_IMP_NODB		(1 << 6) /* no data breaks */
+#define EJTAG_V20_IMP_NOIB		(1 << 5) /* no instruction breaks
+						    implementeed */
+/* v2.0 - 1:4 Number of Break Channels. */
+#define EJTAG_V20_IMP_BCHANNELS_MASK	0xf
+#define EJTAG_V20_IMP_BCHANNELS_SHIFT	1
 #define EJTAG_DCR_MIPS64		(1 << 0)
 
 /* Debug Control Register DCR */
