@@ -442,8 +442,14 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
 		LOG_DEBUG("EJTAG: DMA Access Mode Support Enabled");
 
-	/* set initial state for ejtag control reg */
-	ejtag_info->ejtag_ctrl = EJTAG_CTRL_ROCC | EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN | EJTAG_CTRL_SETDEV;
+	ejtag_info->ejtag_ctrl = EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN;
+
+	/* EJTAG_CTRL_ROCC and EJTAG_CTRL_SETDEV are not defined on EJTAG 2.0.
+	 * It brakes EJTAG 2.0 devices which use undefined fields for other
+	 * purpose. */
+	if (ejtag_info->ejtag_version != EJTAG_VERSION_20)
+		ejtag_info->ejtag_ctrl |= EJTAG_CTRL_ROCC | EJTAG_CTRL_SETDEV;
+
 	ejtag_info->fast_access_save = -1;
 
 	mips_ejtag_init_mmr(ejtag_info);
