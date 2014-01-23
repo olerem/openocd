@@ -421,6 +421,18 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 			LOG_DEBUG("EJTAG: Unknown Version Detected");
 			break;
 	}
+	switch (ejtag_info->ejtag_variant) {
+		case MIPS:
+			LOG_DEBUG("EJTAG: MIPS Detected");
+			break;
+		case LEXRA:
+			LOG_DEBUG("EJTAG: LEXRA Detected");
+			break;
+		default:
+			LOG_DEBUG("EJTAG: Unknown Variant Detected");
+			break;
+	}
+
 	ejtag_main_print_imp(ejtag_info);
 
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
