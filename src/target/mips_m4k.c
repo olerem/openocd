@@ -302,6 +302,7 @@ static int mips_m4k_assert_reset(struct target *target)
 {
 	struct mips_m4k_common *mips_m4k = target_to_m4k(target);
 	struct mips_ejtag *ejtag_info = &mips_m4k->mips32.ejtag_info;
+	uint32_t ejtag_ctrl;
 
 	LOG_DEBUG("target->state: %s",
 		target_state_name(target));
@@ -348,12 +349,43 @@ static int mips_m4k_assert_reset(struct target *target)
 			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
 		} else {
 			/* use ejtag reset - not supported by all cores */
-			uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
+			ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
 			LOG_DEBUG("Using EJTAG reset (PRRST) to reset processor...");
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
 		}
 	}
+
+#if 0
+	/* after SRST was done, we can initiate old style reset */
+	if (ejtag_info->ejtag_version == EJTAG_VERSION_20) {
+		if (target->reset_halt) {
+			/* For sort of EJTAGBOOT on v2.0 we need to set ProbeEn
+			 * and asser TRST. */
+			/* Assuming ProbeEn is set by default */
+			ejtag_ctrl = ejtag_info->ejtag_ctrl;
+			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
+			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
+
+//			jtag_add_reset(1, 0);
+#if 0
+			{
+				/* No TRST? Lets try soft RST */
+				ejtag_ctrl = ejtag_info->ejtag_ctrl
+					   | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
+				LOG_DEBUG("Using EJTAG reset (PRRST) to reset processor...");
+				mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
+				mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
+			}
+#endif
+
+			ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_JTAGBRK;
+			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
+			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
+		}
+	}
+#endif
+
 
 	target->state = TARGET_RESET;
 	jtag_add_sleep(50000);
