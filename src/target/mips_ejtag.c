@@ -436,8 +436,10 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 
 	ejtag_main_print_imp(ejtag_info);
 
-	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0)
-		LOG_DEBUG("EJTAG: DMA Access Mode Support Enabled");
+	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0) {
+		LOG_DEBUG("EJTAG: DMA Access Mode detected. Disable it.");
+		ejtag_info->impcode |= EJTAG_IMP_NODMA;
+	}
 
 	ejtag_info->ejtag_ctrl = EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN;
 
