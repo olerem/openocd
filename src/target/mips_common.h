@@ -20,7 +20,7 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program; if not, write to the                         *
  *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
+ *                                                                         *
  ***************************************************************************/
 
 #ifndef MIPS_COMMON_H
@@ -64,7 +64,7 @@ int mips_common_remove_breakpoint(struct target *target, struct breakpoint *brea
 int mips_common_remove_watchpoint(struct target *target, struct watchpoint *watchpoint);
 
 /* Common commands define in both m4k and mips32 targets */
-int mips_common_scan_delay (struct command_invocation *cmd);
-int mips_common_cp0_command (struct command_invocation *cmd);
+int mips_common_scan_delay(struct command_invocation *cmd);
+int mips_common_cp0_command(struct command_invocation *cmd);
 
 #endif	/*MIPS_COMMON_H*/

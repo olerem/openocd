@@ -210,8 +210,7 @@ struct mips_ejtag {
 	uint32_t ejtag_dbasid_offs;	/* DAB ASID (4Kc) */
 
 	uint32_t ejtag_iba_step_size;
-	uint32_t ejtag_dba_step_size;	/* siez of step till next
-					 * *DBAn register. */
+	uint32_t ejtag_dba_step_size;	/* size of step till next *DBAn register. */
 };
 
 void mips_ejtag_set_instr(struct mips_ejtag *ejtag_info,

@@ -75,7 +75,6 @@ struct reg_cache **register_get_last_cache_p(struct reg_cache **first)
 /** Marks the contents of the register cache as invalid (and clean). */
 void register_cache_invalidate(struct reg_cache *cache)
 {
-	LOG_DEBUG("register_cache_invalidate");
 	struct reg *reg = cache->reg_list;
 
 	for (unsigned n = cache->num_regs; n != 0; n--, reg++) {

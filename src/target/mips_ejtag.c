@@ -1,25 +1,25 @@
 /***************************************************************************
- *	 Copyright (C) 2008 by Spencer Oliver								   *
- *	 spen@spen-soft.co.uk												   *
- *																		   *
- *	 Copyright (C) 2008 by David T.L. Wong								   *
- *																		   *
- *	 Copyright (C) 2009 by David N. Claffey <dnclaffey@gmail.com>		   *
- *																		   *
- *	 This program is free software; you can redistribute it and/or modify  *
- *	 it under the terms of the GNU General Public License as published by  *
- *	 the Free Software Foundation; either version 2 of the License, or	   *
- *	 (at your option) any later version.								   *
- *																		   *
- *	 This program is distributed in the hope that it will be useful,	   *
- *	 but WITHOUT ANY WARRANTY; without even the implied warranty of		   *
- *	 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the		   *
- *	 GNU General Public License for more details.						   *
- *																		   *
- *	 You should have received a copy of the GNU General Public License	   *
- *	 along with this program; if not, write to the						   *
- *	 Free Software Foundation, Inc.,									   *
- *	 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.		   *
+ *   Copyright (C) 2008 by Spencer Oliver                                  *
+ *   spen@spen-soft.co.uk                                                  *
+ *                                                                         *
+ *   Copyright (C) 2008 by David T.L. Wong                                 *
+ *                                                                         *
+ *   Copyright (C) 2009 by David N. Claffey <dnclaffey@gmail.com>          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.           *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
@@ -75,8 +75,7 @@ int mips_ejtag_get_idcode(struct mips_ejtag *ejtag_info, uint32_t *idcode)
 	return ERROR_OK;
 }
 
-//static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
-int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
+static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
 {
 	struct scan_field field;
 	uint8_t r[4];
@@ -127,7 +126,7 @@ void mips_ejtag_add_scan_96(struct mips_ejtag *ejtag_info, uint32_t ctrl, uint32
 int mips_ejtag_drscan_32(struct mips_ejtag *ejtag_info, uint32_t *data)
 {
 	struct jtag_tap *tap;
-	tap	 = ejtag_info->tap;
+	tap  = ejtag_info->tap;
 	assert(tap != NULL);
 
 	struct scan_field field;
@@ -158,7 +157,7 @@ void mips_ejtag_drscan_32_out(struct mips_ejtag *ejtag_info, uint32_t data)
 {
 	uint8_t t[4];
 	struct jtag_tap *tap;
-	tap	 = ejtag_info->tap;
+	tap  = ejtag_info->tap;
 	assert(tap != NULL);
 
 	struct scan_field field;
@@ -175,7 +174,7 @@ void mips_ejtag_drscan_32_out(struct mips_ejtag *ejtag_info, uint32_t data)
 int mips_ejtag_drscan_8(struct mips_ejtag *ejtag_info, uint32_t *data)
 {
 	struct jtag_tap *tap;
-	tap	 = ejtag_info->tap;
+	tap  = ejtag_info->tap;
 	assert(tap != NULL);
 
 	struct scan_field field;
@@ -203,7 +202,7 @@ int mips_ejtag_drscan_8(struct mips_ejtag *ejtag_info, uint32_t *data)
 void mips_ejtag_drscan_8_out(struct mips_ejtag *ejtag_info, uint8_t data)
 {
 	struct jtag_tap *tap;
-	tap	 = ejtag_info->tap;
+	tap  = ejtag_info->tap;
 	assert(tap != NULL);
 
 	struct scan_field field;
@@ -223,18 +222,17 @@ int mips_ejtag_config_step(struct mips_ejtag *ejtag_info, int enable_step)
 	if (ctx.retval != ERROR_OK)
 		goto exit;
 
-	pracc_add(&ctx, 0, MIPS32_MFC0(8, 23, 0));							/* move COP0 Debug to $8 */
-	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, 0x0100));						/* set SSt bit in debug reg */
+	pracc_add(&ctx, 0, MIPS32_MFC0(8, 23, 0));			/* move COP0 Debug to $8 */
+	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, 0x0100));			/* set SSt bit in debug reg */
 	if (!enable_step)
-		pracc_add(&ctx, 0, MIPS32_XORI(8, 8, 0x0100));					/* clear SSt bit in debug reg */
+		pracc_add(&ctx, 0, MIPS32_XORI(8, 8, 0x0100));		/* clear SSt bit in debug reg */
 
-	pracc_add(&ctx, 0, MIPS32_MTC0(8, 23, 0));							/* move $8 to COP0 Debug */
+	pracc_add(&ctx, 0, MIPS32_MTC0(8, 23, 0));			/* move $8 to COP0 Debug */
 	pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(ejtag_info->reg8)));		/* restore upper 16 bits  of $8 */
 	pracc_add(&ctx, 0, MIPS32_B(NEG16((ctx.code_count + 1))));			/* jump to start */
 	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(ejtag_info->reg8)));	/* restore lower 16 bits of $8 */
 
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
-
 exit:
 	pracc_queue_free(&ctx);
 	return ctx.retval;
@@ -277,13 +275,11 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 
 	/* set debug break bit */
 	ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_JTAGBRK;
-	LOG_DEBUG("R:ejtag_ctrl: 0x%8.8" PRIx32 "", ejtag_ctrl);
 	mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
 
 	/* break bit will be cleared by hardware */
 	ejtag_ctrl = ejtag_info->ejtag_ctrl;
 	mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
-
 	LOG_DEBUG("ejtag_ctrl: 0x%8.8" PRIx32 "", ejtag_ctrl);
 	if ((ejtag_ctrl & EJTAG_CTRL_BRKST) == 0)
 		goto error;
@@ -307,7 +303,7 @@ int mips_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
 	return ctx.retval;
 }
 
-/* mips_ejtag_init_mmr - assign Memory-Mapped Registers depending
+/* mips_ejtag_init_mmr - asign Memory-Mapped Registers depending
  *			on EJTAG version.
  */
 static void mips_ejtag_init_mmr(struct mips_ejtag *ejtag_info)
@@ -404,6 +400,7 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 
 	/* get ejtag version */
 	ejtag_info->ejtag_version = ((ejtag_info->impcode >> 29) & 0x07);
+
 	switch (ejtag_info->ejtag_version) {
 		case EJTAG_VERSION_20:
 			LOG_DEBUG("EJTAG: Version 1 or 2.0 Detected");
