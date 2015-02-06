@@ -7797,6 +7797,18 @@ the peripherals.
 @xref{targetevents,,Target Events}.
 @end deffn
 
+@subsection Cortex-A specific commands
+@cindex Cortex-A
+
+@deffn Command {cortex_a mem_ap_enable} (@option{0}|@option{1})
+This command can be used to override the memory access type.
+
+If the target has AHB-AP (aka MEM-AP) then OpenOCD will use it by
+default for all memory accesses. This option enables forcing APB-AP
+access instead and can be used as a workaround for bugs in AHB-AP code
+or for testing purposes.
+@end deffn
+
 @section Intel Architecture
 
 Intel Quark X10xx is the first product in the Quark family of SoCs. It is an IA-32

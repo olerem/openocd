@@ -3190,6 +3190,30 @@ COMMAND_HANDLER(cortex_a_handle_smp_gdb_command)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(cortex_a_handle_mem_ap_enable_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (CMD_ARGC == 1) {
+		int enable;
+		COMMAND_PARSE_NUMBER(int, CMD_ARGV[0], enable);
+
+		if (enable) {
+			int retval = dap_find_ap(armv7a->arm.dap, AP_TYPE_AHB_AP, &armv7a->memory_ap);
+			if (retval != ERROR_OK) {
+				LOG_ERROR("AHB-AP not found, can't enable");
+				return ERROR_FAIL;
+			}
+		}
+
+		armv7a->memory_ap_available = !!enable;
+
+		return ERROR_OK;
+	}
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
 static const struct command_registration cortex_a_exec_command_handlers[] = {
 	{
 		.name = "cache_info",
@@ -3223,6 +3247,13 @@ static const struct command_registration cortex_a_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.help = "display/fix current core played to gdb",
 		.usage = "",
+	},
+	{
+		.name = "mem_ap_enable",
+		.handler = cortex_a_handle_mem_ap_enable_command,
+		.mode = COMMAND_EXEC,
+		.help = "force enable or disable memory access via AHB",
+		.usage = "mem_ap_enable (1|0)",
 	},
 
 
