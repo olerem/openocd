@@ -3183,6 +3183,36 @@ COMMAND_HANDLER(cortex_a_handle_smp_gdb_command)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(cortex_a_handle_force_apb_ap_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (CMD_ARGC == 0) {
+		command_print(CMD_CTX, "%s is selected for memory operations",
+			      armv7a->memory_ap_available ? "AHB-AP" : "APB-AP");
+		return ERROR_OK;
+	}
+
+	if (CMD_ARGC == 1) {
+		bool force;
+		COMMAND_PARSE_ENABLE(CMD_ARGV[0], force);
+
+		if (!force) {
+			int retval = dap_find_ap(armv7a->arm.dap, AP_TYPE_AHB_AP, &armv7a->memory_ap);
+			if (retval != ERROR_OK) {
+				LOG_ERROR("AHB-AP not found, APB-AP will be used for memory operations");
+				return ERROR_FAIL;
+			}
+		}
+
+		armv7a->memory_ap_available = !force;
+
+		return ERROR_OK;
+	}
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
 static const struct command_registration cortex_a_exec_command_handlers[] = {
 	{
 		.name = "cache_info",
@@ -3216,6 +3246,13 @@ static const struct command_registration cortex_a_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.help = "display/fix current core played to gdb",
 		.usage = "",
+	},
+	{
+		.name = "force_apb_ap",
+		.handler = cortex_a_handle_force_apb_ap_command,
+		.mode = COMMAND_EXEC,
+		.help = "force APB-AP access for memory operations",
+		.usage = "(1|0)",
 	},
 
 
