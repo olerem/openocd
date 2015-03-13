@@ -395,7 +395,7 @@ int mips_common_assert_reset(struct target *target)
 		}
 	} else {
 		/* use ejtag reset - not supported by all cores */
-		uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
+		ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
 		LOG_DEBUG("Using EJTAG reset (PRRST) to reset processor...");
 		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 		mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
@@ -428,6 +428,7 @@ int mips_common_deassert_reset(struct target *target)
 
 int mips_common_single_step_core(struct target *target)
 {
+	LOG_DEBUG ("single_step_core");
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
 
@@ -724,7 +725,7 @@ int mips_common_set_breakpoint(struct target *target,
 			/* Remove isa_mode info from length to adjust to correct instruction size */
 			if (breakpoint->length == 5)
 				breakpt_instr = MICRO_MIPS32_SDBBP;
-		    else
+			else
 				breakpt_instr = MIPS32_SDBBP;
 
 			retval = target_read_memory(target, breakpoint->address, (breakpoint->length & 0xE),
