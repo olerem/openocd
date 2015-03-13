@@ -75,7 +75,8 @@ int mips_ejtag_get_idcode(struct mips_ejtag *ejtag_info, uint32_t *idcode)
 	return ERROR_OK;
 }
 
-static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
+//static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
+int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
 {
 	struct scan_field field;
 	uint8_t r[4];
@@ -269,6 +270,7 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 
 	if (ejtag_info->ejtag_version == EJTAG_VERSION_20) {
+		LOG_INFO ("VERSION_20");
 		if (disable_dcr_mp(ejtag_info) != ERROR_OK)
 			goto error;
 	}
@@ -298,7 +300,7 @@ int mips_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
 	/* execute our dret instruction */
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
 
-	/* pic32mx workaround, false pending at low core clock */
+	/* pic32mx/mz workaround, false pending at low core clock */
 	jtag_add_sleep(1000);
 	return ctx.retval;
 }
@@ -396,6 +398,7 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 	retval = mips_ejtag_get_impcode(ejtag_info, &ejtag_info->impcode);
 	if (retval != ERROR_OK)
 		return retval;
+
 	LOG_DEBUG("impcode: 0x%8.8" PRIx32 "", ejtag_info->impcode);
 
 	/* get ejtag version */
@@ -424,6 +427,7 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 			LOG_DEBUG("EJTAG: Unknown Version Detected");
 			break;
 	}
+
 	ejtag_main_print_imp(ejtag_info);
 
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0) {
@@ -434,8 +438,9 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 
 	ejtag_info->ejtag_ctrl = EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN;
 
-	if (ejtag_info->ejtag_version != EJTAG_VERSION_20)
+	if (ejtag_info->ejtag_version != EJTAG_VERSION_20) {
 		ejtag_info->ejtag_ctrl |= EJTAG_CTRL_ROCC | EJTAG_CTRL_SETDEV;
+	}
 
 	ejtag_info->fast_access_save = -1;
 

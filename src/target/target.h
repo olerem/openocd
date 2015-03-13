@@ -367,6 +367,8 @@ static inline void target_set_examined(struct target *target)
 	target->examined = true;
 }
 
+void target_reset_examined(struct target *target);
+
 /**
  * Add the @a breakpoint for @a target.
  *

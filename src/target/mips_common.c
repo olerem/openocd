@@ -228,7 +228,6 @@ int mips_common_poll(struct target *target)
 		/* we have detected a reset, clear flag
 		 * otherwise ejtag will not work */
 		ejtag_ctrl = ejtag_info->ejtag_ctrl & ~EJTAG_CTRL_ROCC;
-
 		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 		retval = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
 		if (retval != ERROR_OK) {
@@ -348,6 +347,7 @@ int mips_common_assert_reset(struct target *target)
 	struct mips_ejtag *ejtag_info = &mips32->mips32.ejtag_info;
 
 	LOG_DEBUG("target->state: %s", target_state_name(target));
+	uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl;
 
 	enum reset_types jtag_reset_config = jtag_get_reset_config();
 
@@ -377,24 +377,28 @@ int mips_common_assert_reset(struct target *target)
 			jtag_add_reset(1, 1);
 		else if (!srst_asserted)
 			jtag_add_reset(0, 1);
-	} else {
-		if (mips32->is_pic32mx) {
-			LOG_DEBUG("Using MTAP reset to reset processor...");
+	} 
 
-			/* use microchip specific MTAP reset */
-			mips_ejtag_set_instr(ejtag_info, MTAP_SW_MTAP);
-			mips_ejtag_set_instr(ejtag_info, MTAP_COMMAND);
+	if (mips32->is_pic32) {
+		LOG_DEBUG("Using MTAP reset to reset processor...");
 
-			mips_ejtag_drscan_8_out(ejtag_info, MCHP_ASERT_RST);
-			mips_ejtag_drscan_8_out(ejtag_info, MCHP_DE_ASSERT_RST);
-			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
-		} else {
-			/* use ejtag reset - not supported by all cores */
-			uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
-			LOG_DEBUG("Using EJTAG reset (PRRST) to reset processor...");
-			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
-			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
+		/* use microchip specific MTAP reset */
+		mips_ejtag_set_instr(ejtag_info, MTAP_SW_MTAP);
+//		mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
+		mips_ejtag_set_instr(ejtag_info, MTAP_COMMAND);
+
+		mips_ejtag_drscan_8_out(ejtag_info, MCHP_ASERT_RST);
+		mips_ejtag_drscan_8_out(ejtag_info, MCHP_DE_ASSERT_RST);
+		mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
+		if (target->reset_halt) {
+			mips_ejtag_set_instr(ejtag_info, 0x0c);
 		}
+	} else {
+		/* use ejtag reset - not supported by all cores */
+		uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
+		LOG_DEBUG("Using EJTAG reset (PRRST) to reset processor...");
+		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
+		mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
 	}
 
 	target->state = TARGET_RESET;
@@ -1078,8 +1082,9 @@ int mips_common_read_memory(struct target *target, uint32_t address,
 	/* if noDMA off, use DMAACC mode for memory read */
 	/* Note: Currently no core implement this feature */
 	int retval;
-	if (ejtag_info->impcode & EJTAG_IMP_NODMA)
+	if (ejtag_info->impcode & EJTAG_IMP_NODMA) {
 		retval = mips32_pracc_read_mem(ejtag_info, address, size, count, t);
+	}
 	else
 		retval = mips32_dmaacc_read_mem(ejtag_info, address, size, count, t);
 
@@ -1184,6 +1189,10 @@ int mips_common_examine(struct target *target)
 	struct mips_ejtag *ejtag_info = &mips32->mips32.ejtag_info;
 	uint32_t idcode = 0;
 
+	// Need to re-examine target
+	if (mips32->is_pic32 == true)
+		target_reset_examined(target);
+
 	if (!target_was_examined(target)) {
 		retval = mips_ejtag_get_idcode(ejtag_info, &idcode);
 		if (retval != ERROR_OK)
@@ -1191,22 +1200,26 @@ int mips_common_examine(struct target *target)
 		ejtag_info->idcode = idcode;
 
 		if (((idcode >> 1) & 0x7FF) == 0x29) {
-			/* we are using a pic32mx so select ejtag port
+			/* we are using a pic32 so select ejtag port
 			 * as it is not selected by default */
 			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
-			LOG_DEBUG("PIC32MX Detected - using EJTAG Interface");
-			mips32->is_pic32mx = true;
+			LOG_DEBUG("PIC32MX/MZ Detected - using EJTAG Interface");
+			mips32->is_pic32 = true;
 		}
 	}
 
 	/* init rest of ejtag interface */
 	retval = mips_ejtag_init(ejtag_info);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips_ejtag_init failed");
 		return retval;
+	}
 
 	retval = mips32_examine(target);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips32_examine failed");
 		return retval;
+	}
 
 	return ERROR_OK;
 }

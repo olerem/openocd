@@ -68,6 +68,7 @@
 /* offsets into mips32 core register cache */
 enum {
 	MIPS32_PC = 37,
+	MIPS32_FIR = 71,
 	MIPS32NUMCOREREGS
 };
 
@@ -169,8 +170,8 @@ struct mips32_common {
 	struct mips32_comparator *data_break_list;
 
 	/* register cache to processor synchronization */
-	int (*read_core_reg)(struct target *target, int num);
-	int (*write_core_reg)(struct target *target, int num);
+	int (*read_core_reg)(struct target *target, unsigned int num);
+	int (*write_core_reg)(struct target *target, unsigned int num);
 };
 
 static inline struct mips32_common *
@@ -515,7 +516,7 @@ struct mips32_algorithm {
 #define MIPS32_SW(reg, off, base)		MIPS32_I_INST(MIPS32_OP_SW, base, reg, off)
 #define MIPS32_XOR(reg, val1, val2)		MIPS32_R_INST(0, val1, val2, reg, 0, MIPS32_OP_XOR)
 #define MIPS32_SRL(reg, src, off)		MIPS32_R_INST(0, 0, src, reg, off, MIPS32_OP_SRL)
-#define MIPS32_SLTU(dst, tar, src)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLTU)
+#define MIPS32_SLTU(dst, src, tar)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLTU)
 #define MIPS32_SLLV(dst, tar, src)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLLV)
 #define MIPS32_SYNCI(off, base)			MIPS32_I_INST(MIPS32_OP_REGIMM, base, MIPS32_OP_SYNCI, off)
 
@@ -562,6 +563,205 @@ struct mips32_algorithm {
 
 #define MICRO_DSP_RDDSP(rt, mask)	MICRO_DSP_R_INST(rt, mask, MICRO_MIPS_OP_RDDSP)
 #define MICRO_DSP_WRDSP(rt, mask)	MICRO_DSP_R_INST(rt, mask, MICRO_MIPS_OP_WRDSP)
+
+//CPU types
+//NOTE!	 If any cores added, must also add in mdi/mdi_internal.c
+//CPU TYPES
+#define MIPS_CORE_4K   0x0000
+#define MIPS_CORE_4KE  0x0100
+#define MIPS_CORE_4KS  0x0200
+#define MIPS_CORE_5K   0x0400
+#define MIPS_CORE_20K  0x0800
+#define MIPS_CORE_M4K  0x1000
+#define MIPS_CORE_24K  0x2000
+#define MIPS_CORE_34K  0x4000
+#define MIPS_CORE_AU1  0x8000
+#define MIPS_CORE_24KE 0x10000
+#define MIPS_CORE_74K  0x20000
+#define MIPS_CORE_84K  0x40000
+#define MIPS_CORE_BCM  0x80000
+#define MIPS_CORE_1004K	 0x100000
+#define MIPS_CORE_1074K	 0x200000
+#define MIPS_CORE_M14K	  0x400000
+#define MIPS_CORE_ALTERA  0x800000
+#define MIPS_CORE_PROAPTIV	0x1000000
+#define MIPS_CORE_INTERAPTIV  0x2000000
+#define MIPS_CORE_5KE	0x4000000
+#define MIPS_CORE_P5600 0x8000000
+#define MIPS_CORE_I5500 0x10000000
+
+#define MIPS_CORE_MASK 0xFFFFFF00
+#define MIPS_VARIANT_MASK 0x00FF
+
+//DEVICE: cpu information
+//CPU
+typedef enum {
+   CPUTYPE_UNKNOWN = 0,
+   MIPS_4Kc	  =0x0001 | MIPS_CORE_4K,
+   MIPS_4Km	  =0x0002 | MIPS_CORE_4K,
+   MIPS_4Kp	  =0x0004 | MIPS_CORE_4K,
+   MIPS_4KEc  =0x0001 | MIPS_CORE_4KE,
+   MIPS_4KEm  =0x0002 | MIPS_CORE_4KE,
+   MIPS_4KEp  =0x0004 | MIPS_CORE_4KE,
+   MIPS_4KSc  =0x0001 | MIPS_CORE_4KS,
+   MIPS_4KSd  =0x0002 | MIPS_CORE_4KS,
+   MIPS_M4K	  =0x0008 | MIPS_CORE_M4K,
+   MIPS_24Kc  =0x0001 | MIPS_CORE_24K,
+   MIPS_24Kf  =0x0010 | MIPS_CORE_24K,
+   MIPS_24KEc =0x0001 | MIPS_CORE_24KE,
+   MIPS_24KEf =0x0010 | MIPS_CORE_24KE,
+   MIPS_34Kc  =0x0001 | MIPS_CORE_34K,
+   MIPS_34Kf  =0x0010 | MIPS_CORE_34K,
+   MIPS_5Kc	  =0x0001 | MIPS_CORE_5K,
+   MIPS_5Kf	  =0x0010 | MIPS_CORE_5K,
+   MIPS_5KEc  =0x0001 | MIPS_CORE_5KE,
+   MIPS_5KEf  =0x0010 | MIPS_CORE_5KE,
+   MIPS_20Kc  =0x0001 | MIPS_CORE_20K,
+   MIPS_25Kf  =0x0010 | MIPS_CORE_20K,
+   MIPS_AU1000=0x0001 | MIPS_CORE_AU1,
+   MIPS_AU1100=0x0002 | MIPS_CORE_AU1,
+   MIPS_AU1200=0x0003 | MIPS_CORE_AU1,
+   MIPS_AU1500=0x0004 | MIPS_CORE_AU1,
+   MIPS_AU1550=0x0005 | MIPS_CORE_AU1,
+   MIPS_74Kc  =0x0001 | MIPS_CORE_74K,
+   MIPS_74Kf  =0x0010 | MIPS_CORE_74K,
+   MIPS_84Kc  =0x0001 | MIPS_CORE_84K,
+   MIPS_84Kf  =0x0010 | MIPS_CORE_84K,
+   MIPS_BCM	  =0x0000 | MIPS_CORE_BCM,
+   MIPS_MP32   =0x0000 | MIPS_CORE_ALTERA,
+   MIPS_1004Kc=0x0001 | MIPS_CORE_1004K,
+   MIPS_1004Kf=0x0010 | MIPS_CORE_1004K,
+   MIPS_1074Kc=0x0001 | MIPS_CORE_1074K,
+   MIPS_1074Kf=0x0010 | MIPS_CORE_1074K,
+   MIPS_M14Kc  =0x0001 | MIPS_CORE_M14K,
+   MIPS_M14K   =0x0002 | MIPS_CORE_M14K,
+   MIPS_M14Kf  =0x0010 | MIPS_CORE_M14K,
+   MIPS_M14KE  =0x0020 | MIPS_CORE_M14K,	  // now called microAptiv UC
+   MIPS_M14KEf =0x0030 | MIPS_CORE_M14K,	  // now called microAptiv UCF
+   MIPS_M14KEc =0x0040 | MIPS_CORE_M14K,	  // now called microAptiv UP
+   MIPS_M14KEcf=0x0050 | MIPS_CORE_M14K,	  // now called microAptiv UPF
+   MIPS_M5100=0x0090 | MIPS_CORE_M14K,
+   MIPS_M5150=0x00B0 | MIPS_CORE_M14K,
+   MIPS_PROAPTIV =0x0001 | MIPS_CORE_PROAPTIV,
+   MIPS_PROAPTIV_CM =0x0002 | MIPS_CORE_PROAPTIV,
+   MIPS_INTERAPTIV =0x0001 | MIPS_CORE_INTERAPTIV,
+   MIPS_INTERAPTIV_CM =0x0002 | MIPS_CORE_INTERAPTIV,
+   MIPS_P5600 = MIPS_CORE_P5600,
+   MIPS_I5500 = MIPS_CORE_I5500,
+} CPUTYPE;
+
+#if 0
+enum CPU_TYPE { MIPS_4Kc, MIPS_4Km, MIPS_4Kp, MIPS_4KEc, MIPS_4KEm, MIPS_4KEp, MIPS_4KSc, MIPS_4KSd,
+	   MIPS_M4K, MIPS_24Kc, MIPS_24Kf, MIPS_24KEc, MIPS_24KEf, MIPS_34Kc, MIPS_34Kf,
+	   MIPS_5Kc, MIPS_5Kf, MIPS_5KEc, MIPS_5KEf, MIPS_20Kc, MIPS_25Kf,
+	   MIPS_AU1000, MIPS_AU1100, MIPS_AU1200, MIPS_AU1500, MIPS_AU1550,
+	   MIPS_74Kc, MIPS_74Kf, MIPS_84Kc, MIPS_84Kf, MIPS_BCM,
+	   MIPS_1004Kc, MIPS_1004Kf, MIPS_1074Kc, MIPS_1074Kf, MIPS_M14Kc, MIPS_M14K, MIPS_M14Kf, 
+	   MIPS_MP32, MIPS_M14KE, MIPS_M14KEc, MIPS_PROAPTIV, MIPS_PROAPTIV_CM,
+	   MIPS_INTERAPTIV, MIPS_INTERAPTIV_CM,
+	   MIPS_M14KEf, MIPS_M14KEcf,
+	   MIPS_M5100, MIPS_M5150,
+	   MIPS_P5600, MIPS_I5500,
+};
+#endif
+
+enum CPU_VENDOR {
+	MIPS_CORE,
+	ALCHEMY_CORE, 
+	BROADCOM_CORE,
+	ALTERA_CORE,
+};
+
+enum CPU_INSTRUCTION_SET {
+	MIPS16,
+	MIPS32,
+	MIPS64,
+	MICROMIPS_ONLY,
+	MIPS32_AT_RESET_AND_MICROMIPS,
+	MICROMIPS_AT_RESET_AND_MIPS32, 
+};
+
+enum EJTAG_VERSION {
+	EJTAG_VER_UNKNOWN,
+	EJTAG_2_0,
+	EJTAG_2_5,
+	EJTAG_2_6,
+	EJTAG_3_1,
+	EJTAG_4_0, 
+	EJTAG_5_0,
+};
+
+typedef struct {
+	uint32_t cpuCore;				// type of CPU	(4Kc, 24Kf, etc.)
+	uint32_t cpuType;					// internal representation of cpu type
+	enum CPU_VENDOR vendor;				// who makes the CPU:
+	enum CPU_INSTRUCTION_SET instSet;	// MIPS16, MIPS32, microMIPS.
+	uint32_t prid;						// processor's prid
+	uint32_t numRegs;					//number of registers (same as calling HdiDeviceRegisterTotalGet)
+	uint32_t numInstBkpts;				// number of instruction breakpoints in this CPU
+	uint32_t numDataBkpts;				// number of data breakpoints in this CPU
+	uint32_t numTcbTrig;				// number of TCB triggers in this CPU
+	bool pdtrace;						// CPU has trace?
+	bool asidInstBkpts;					// asid specification supported in Inst Bkpts?
+	bool asidDataBkpts;					// asid specification supported in Data Bkpts?
+	bool sharedInstBkpts;				// Are inst bkpts shared between VPE's
+	bool sharedDataBkpts;				// Are data bkpts shared between VPE's
+	bool armedInstBkpts;				// Do inst bkpts have armed triggering
+	bool armedDataBkpts;				// Do inst bkpts have armed triggering
+	uint32_t bkptRangePresent;			// Bitmask indicating which triggers have address ranging capability (bit 0-15 = inst, 16=31 = data)
+	uint32_t tcbrev;					// TCB revision number
+	uint32_t tcbCpuBits;				// Number of bits in the CPU field of trace words
+	uint32_t tcbVmodes;					// Vmodes field (1=lsa supported, 2=lsad supported)
+	bool pcTraceForcedOn;				// TRUE if hardware always collects PC trace
+	bool mtase;							// CPU has MultiThreading extension?
+	bool dspase;						// CPU has DSP extension?
+	bool smase;							// CPU has SmartMIPS extension?
+	bool m16ase;						// CPU has MIPS16[e] extension?
+	bool micromipsase;					// CPU has microMIPS extension?
+    uint32_t vzase;							// CPU has Virtualization ASE?
+	uint32_t vzGuestIdWidth;
+	bool vzGuestId;						// CPU has Virtualization ASE and supports Guest ID?
+	bool profiling;						// Is profiling present?
+	bool fpuPresent;					// CPU has floating point unit?
+	bool pcSampSupported;				// CPU has PC Sampling capability
+	bool DASampSupported;				// CPU has Data Address Sampling capability
+	uint32_t cpuid;						// ebase.cpuid number
+	uint32_t vpeid;						// VPE id number
+	uint32_t numtc;						// Number of TC's in this processor
+	uint32_t numvpe;					// Number of VPE's in this processor
+	uint32_t numitc;					// Number of ITC cells in this processor
+	bool offchip;						// Sofware supports off-chip trace?
+	bool onchip;						// Sofware supports on-chip trace?
+	bool hwoffchip;						// CPU hardware supported off-chip trace?
+	bool hwonchip;						// CPU hardware supported on-chip trace?
+	bool iFlowtrace;					// CPU has iFlowtrace (tm)?
+	bool cbtrig;						// CPU has complex break and trigger block?
+	bool cbtrigPassCounters;			//CBT pass counters present?
+	bool cbtrigTuples;					//CBT tuples present?
+	bool cbtrigDataQualifiers;			//CBT data qualifiers present?
+	bool cbtrigPrimedBreaks;			//CBT primed breaks present?
+	bool cbtrigStopWatch;				//CBT stop watch present?
+	bool cbtrigNot;						//CBT not (invert data value match) supported?
+	bool pmtrace;						//Does system have performance monitor trace?
+	uint32_t adsize;					//Address size
+	enum EJTAG_VERSION ejtagVersion;	//EJTAG version
+	uint32_t iCacheSize;
+	uint32_t dCacheSize;
+	bool mmuType;
+	uint32_t tlbEntries;
+	bool fdcPresent;
+	bool evaPresent;					// Enhanced virtual address (introduced with proAptiv).
+	bool systemTracePresent;
+	uint32_t numshadowregs;
+	uint32_t impcode;
+	uint32_t idcode;
+	uint32_t onchipSize;
+	bool cmPresent;
+	bool msaPresent;
+	bool msa;							// does cpu have MSA module
+	bool mvh;							// are mfhc0 and mthc0 instructions implemented?
+	bool guestCtl1Present;
+} CPU_INFO;
 
 extern const struct command_registration mips32_command_handlers[];
 

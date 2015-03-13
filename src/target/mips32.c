@@ -42,6 +42,9 @@ static const char *mips_isa_strings[] = {
 	"MIPS32", "MIPS16"
 };
 
+#define MIPS32_GDB_DUMMY_FP_REG 1
+
+
 static const struct {
 	unsigned option;
 	const char *arg;
@@ -56,64 +59,137 @@ static const struct {
 static const struct {
 	unsigned id;
 	const char *name;
-} mips32_regs[MIPS32NUMCOREREGS] = {
-	{ zero, "zero", },
-	{ AT, "at", },
-	{ v0, "v0", },
-	{ v1, "v1", },
-	{ a0, "a0", },
-	{ a1, "a1", },
-	{ a2, "a2", },
-	{ a3, "a3", },
-	{ t0, "t0", },
-	{ t1, "t1", },
-	{ t2, "t2", },
-	{ t3, "t3", },
-	{ t4, "t4", },
-	{ t5, "t5", },
-	{ t6, "t6", },
-	{ t7, "t7", },
-	{ s0, "s0", },
-	{ s1, "s1", },
-	{ s2, "s2", },
-	{ s3, "s3", },
-	{ s4, "s4", },
-	{ s5, "s5", },
-	{ s6, "s6", },
-	{ s7, "s7", },
-	{ t8, "t8", },
-	{ t9, "t9", },
-	{ k0, "k0", },
-	{ k1, "k1", },
-	{ gp, "gp", },
-	{ sp, "sp", },
-	{ fp, "fp", },
-	{ ra, "ra", },
+	enum reg_type type;
+	const char *group;
+	const char *feature;
+	int flag;
+} mips32_regs[] = {
+	{  0,  "r0", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  1,  "r1", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  2,  "r2", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  3,  "r3", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  4,  "r4", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  5,  "r5", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  6,  "r6", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  7,  "r7", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  8,  "r8", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{  9,  "r9", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 10, "r10", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 11, "r11", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 12, "r12", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 13, "r13", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 14, "r14", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 15, "r15", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 16, "r16", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 17, "r17", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 18, "r18", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 19, "r19", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 20, "r20", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 21, "r21", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 22, "r22", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 23, "r23", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 24, "r24", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 25, "r25", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 26, "r26", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 27, "r27", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 28, "r28", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 29, "r29", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 30, "r30", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 31, "r31", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 32, "status", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cp0", 0 },
+	{ 33, "lo", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 34, "hi", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
+	{ 35, "badvaddr", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cp0", 0 },
+	{ 36, "cause", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cp0", 0 },
+	{ 37, "pc", REG_TYPE_INT, NULL, "org.gnu.gdb.mips.cpu", 0 },
 
-	{ 32, "status", },
-	{ 33, "lo", },
-	{ 34, "hi", },
-	{ 35, "badvaddr", },
-	{ 36, "cause", },
-	{ 37, "pc" },
+	{ 38,  "f0", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 39,  "f1", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 40,  "f2", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 41,  "f3", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 42,  "f4", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 43,  "f5", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 44,  "f6", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 45,  "f7", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 46,  "f8", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 47,  "f9", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 48, "f10", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 49, "f11", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 50, "f12", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 51, "f13", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 52, "f14", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 53, "f15", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 54, "f16", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 55, "f17", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 56, "f18", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 57, "f19", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 58, "f20", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 59, "f21", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 60, "f22", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 61, "f23", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 62, "f24", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 63, "f25", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 64, "f26", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 65, "f27", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 66, "f28", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 67, "f29", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 68, "f30", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 69, "f31", REG_TYPE_IEEE_SINGLE, NULL,
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 70, "fcsr", REG_TYPE_INT, "float",
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
+	{ 71, "fir", REG_TYPE_INT, "float",
+		"org.gnu.gdb.mips.fpu", MIPS32_GDB_DUMMY_FP_REG },
 };
 
+/* Order fixed */
 static const struct {
-	unsigned reg;
 	const char *name;
 } mips32_dsp_regs[MIPS32NUMDSPREGS] = {
-	{ 0, "hi1"},
-	{ 1, "hi2"},
-	{ 2, "hi3"},
-	{ 3, "lo1"},
-	{ 4, "lo2"},
-	{ 5, "lo3"},
-	{ 6, "control"},
+	{ "hi1"},
+	{ "hi2"},
+	{ "hi3"},
+	{ "lo1"},
+	{ "lo2"},
+	{ "lo3"},
+	{ "control"},
 };
+
 /* number of mips dummy fp regs fp0 - fp31 + fsr and fir
  * we also add 18 unknown registers to handle gdb requests */
 
-#define MIPS32NUMFPREGS (34 + 18)
+#define MIPS32_NUM_REGS ARRAY_SIZE(mips32_regs)
 
 static uint8_t mips32_gdb_dummy_fp_value[] = {0, 0, 0, 0};
 
@@ -125,6 +201,17 @@ static struct reg mips32_gdb_dummy_fp_reg = {
 	.size = 32,
 	.arch_info = NULL,
 };
+
+/* WAYS MAPPING */
+static const int wayTable[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};	   /* field->ways mapping */
+static const int setTableISDS[] = {64,128,256,512,1024,2048,4096,32,		  /* field->sets mapping */
+16*1024, 32*1024, 64*1024, 128*1024, 256*1024, 512*1024, 1024*1024, 2048*1024};
+static const int setTable[] = {64,128,256,512,1024,2048,4096,8192,			  /* field->sets mapping */
+16*1024, 32*1024, 64*1024, 128*1024, 256*1024, 512*1024, 1024*1024, 2048*1024};
+
+/* BPL */
+static const int bplTable[] = {0,4,8,16,32,64,128,256,512,1024,2048,4*1024,8*1024,16*1024,32*1024,64*1024}; /* field->bytes per line */
+static const int bplbitTable[] = {0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};									/* field->bits in bpl */
 
 static int mips32_get_core_reg(struct reg *reg)
 {
@@ -157,14 +244,14 @@ static int mips32_set_core_reg(struct reg *reg, uint8_t *buf)
 	return ERROR_OK;
 }
 
-static int mips32_read_core_reg(struct target *target, int num)
+static int mips32_read_core_reg(struct target *target, unsigned int num)
 {
 	uint32_t reg_value;
 
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
 
-	if ((num < 0) || (num >= MIPS32NUMCOREREGS))
+	if (num >= MIPS32_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	reg_value = mips32->core_regs[num];
@@ -175,14 +262,14 @@ static int mips32_read_core_reg(struct target *target, int num)
 	return ERROR_OK;
 }
 
-static int mips32_write_core_reg(struct target *target, int num)
+static int mips32_write_core_reg(struct target *target, unsigned int num)
 {
 	uint32_t reg_value;
 
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
 
-	if ((num < 0) || (num >= MIPS32NUMCOREREGS))
+	if (num >= MIPS32_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	reg_value = buf_get_u32(mips32->core_cache->reg_list[num].value, 0, 32);
@@ -199,25 +286,25 @@ int mips32_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 {
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
-	int i;
+	unsigned int i;
 
 	/* include floating point registers */
-	*reg_list_size = MIPS32NUMCOREREGS + MIPS32NUMFPREGS;
+	*reg_list_size = MIPS32_NUM_REGS;
 	*reg_list = malloc(sizeof(struct reg *) * (*reg_list_size));
 
-	for (i = 0; i < MIPS32NUMCOREREGS; i++)
+	for (i = 0; i < MIPS32_NUM_REGS; i++)
 		(*reg_list)[i] = &mips32->core_cache->reg_list[i];
 
 	/* add dummy floating points regs */
-	for (i = MIPS32NUMCOREREGS; i < (MIPS32NUMCOREREGS + MIPS32NUMFPREGS); i++)
-		(*reg_list)[i] = &mips32_gdb_dummy_fp_reg;
+//	for (i = MIPS32NUMCOREREGS; i < (MIPS32NUMCOREREGS + MIPS32NUMFPREGS); i++)
+//		(*reg_list)[i] = &mips32_gdb_dummy_fp_reg;
 
 	return ERROR_OK;
 }
 
 int mips32_save_context(struct target *target)
 {
-	int i;
+	unsigned int i;
 
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
@@ -229,7 +316,7 @@ int mips32_save_context(struct target *target)
 		LOG_DEBUG("mips32_pracc_read_regs failed");
 		return retval;
 	}
-	for (i = 0; i < MIPS32NUMCOREREGS; i++) {
+	for (i = 0; i < MIPS32_NUM_REGS; i++) {
 		if (!mips32->core_cache->reg_list[i].valid) {
 			retval = mips32->read_core_reg(target, i);
 			if (retval != ERROR_OK) {
@@ -244,13 +331,13 @@ int mips32_save_context(struct target *target)
 
 int mips32_restore_context(struct target *target)
 {
-	int i;
+	unsigned int i;
 
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
 
-	for (i = 0; i < MIPS32NUMCOREREGS; i++) {
+	for (i = 0; i < MIPS32_NUM_REGS; i++) {
 		if (mips32->core_cache->reg_list[i].dirty)
 			mips32->write_core_reg(target, i);
 	}
@@ -296,11 +383,12 @@ struct reg_cache *mips32_build_reg_cache(struct target *target)
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
 
-	int num_regs = MIPS32NUMCOREREGS;
+	int num_regs = MIPS32_NUM_REGS;
 	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
 	struct reg *reg_list = calloc(num_regs, sizeof(struct reg));
 	struct mips32_core_reg *arch_info = malloc(sizeof(struct mips32_core_reg) * num_regs);
+	struct reg_feature *feature;
 	int i;
 
 	register_init_dummy(&mips32_gdb_dummy_fp_reg);
@@ -320,11 +408,34 @@ struct reg_cache *mips32_build_reg_cache(struct target *target)
 
 		reg_list[i].name = mips32_regs[i].name;
 		reg_list[i].size = 32;
+
+		if (mips32_regs[i].flag == MIPS32_GDB_DUMMY_FP_REG) {
+			reg_list[i].value = mips32_gdb_dummy_fp_value;
+			reg_list[i].valid = 1;
+			reg_list[i].arch_info = NULL;
+			register_init_dummy(&reg_list[i]);
+		} else {
 		reg_list[i].value = calloc(1, 4);
-		reg_list[i].dirty = 0;
 		reg_list[i].valid = 0;
 		reg_list[i].type = &mips32_reg_type;
 		reg_list[i].arch_info = &arch_info[i];
+			reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
+			if (reg_list[i].reg_data_type)
+				reg_list[i].reg_data_type->type = mips32_regs[i].type;
+			else
+				LOG_ERROR("unable to allocate reg type list");
+		}
+		reg_list[i].dirty = 0;
+		reg_list[i].group = mips32_regs[i].group;
+		reg_list[i].number = i;
+		reg_list[i].exist = true;
+		reg_list[i].caller_save = true;	/* gdb defaults to true */
+		feature = calloc(1, sizeof(struct reg_feature));
+		if (feature) {
+			feature->name = mips32_regs[i].feature;
+			reg_list[i].feature = feature;
+		} else
+			LOG_ERROR("unable to allocate feature list");
 	}
 
 	return cache;
@@ -392,8 +503,8 @@ int mips32_run_algorithm(struct target *target, int num_mem_params,
 	struct mips32_algorithm *mips32_algorithm_info = arch_info;
 	enum mips32_isa_mode isa_mode = mips32->isa_mode;
 
-	uint32_t context[MIPS32NUMCOREREGS];
-	int i;
+	uint32_t context[MIPS32_NUM_REGS];
+	unsigned int i;
 	int retval = ERROR_OK;
 
 	LOG_DEBUG("Running algorithm");
@@ -412,20 +523,20 @@ int mips32_run_algorithm(struct target *target, int num_mem_params,
 	}
 
 	/* refresh core register cache */
-	for (i = 0; i < MIPS32NUMCOREREGS; i++) {
+	for (i = 0; i < MIPS32_NUM_REGS; i++) {
 		if (!mips32->core_cache->reg_list[i].valid)
 			mips32->read_core_reg(target, i);
 		context[i] = buf_get_u32(mips32->core_cache->reg_list[i].value, 0, 32);
 	}
 
-	for (i = 0; i < num_mem_params; i++) {
+	for (i = 0; i < (unsigned int)num_mem_params; i++) {
 		retval = target_write_buffer(target, mem_params[i].address,
 				mem_params[i].size, mem_params[i].value);
 		if (retval != ERROR_OK)
 			return retval;
 	}
 
-	for (i = 0; i < num_reg_params; i++) {
+	for (i = 0; i < (unsigned int)num_reg_params; i++) {
 		struct reg *reg = register_get_by_name(mips32->core_cache, reg_params[i].reg_name, 0);
 
 		if (!reg) {
@@ -449,7 +560,7 @@ int mips32_run_algorithm(struct target *target, int num_mem_params,
 	if (retval != ERROR_OK)
 		return retval;
 
-	for (i = 0; i < num_mem_params; i++) {
+	for (i = 0; i < (unsigned int)num_mem_params; i++) {
 		if (mem_params[i].direction != PARAM_OUT) {
 			retval = target_read_buffer(target, mem_params[i].address, mem_params[i].size,
 					mem_params[i].value);
@@ -458,7 +569,7 @@ int mips32_run_algorithm(struct target *target, int num_mem_params,
 		}
 	}
 
-	for (i = 0; i < num_reg_params; i++) {
+	for (i = 0; i < (unsigned int)num_reg_params; i++) {
 		if (reg_params[i].direction != PARAM_OUT) {
 			struct reg *reg = register_get_by_name(mips32->core_cache, reg_params[i].reg_name, 0);
 			if (!reg) {
@@ -477,7 +588,7 @@ int mips32_run_algorithm(struct target *target, int num_mem_params,
 	}
 
 	/* restore everything we saved before */
-	for (i = 0; i < MIPS32NUMCOREREGS; i++) {
+	for (i = 0; i < MIPS32_NUM_REGS; i++) {
 		uint32_t regvalue;
 		regvalue = buf_get_u32(mips32->core_cache->reg_list[i].value, 0, 32);
 		if (regvalue != context[i]) {
@@ -498,7 +609,6 @@ int mips32_run_algorithm(struct target *target, int num_mem_params,
 int mips32_examine(struct target *target)
 {
 	struct mips32_common *mips32 = target_to_mips32(target);
-
 	if (!target_was_examined(target)) {
 		target_set_examined(target);
 
@@ -709,10 +819,10 @@ int mips32_checksum_memory(struct target *target, uint32_t address,
 	mips32_info.common_magic = MIPS32_COMMON_MAGIC;
 	mips32_info.isa_mode = MIPS32_ISA_MIPS32;
 
-	init_reg_param(&reg_params[0], "a0", 32, PARAM_IN_OUT);
+	init_reg_param(&reg_params[0], "r4", 32, PARAM_IN_OUT);
 	buf_set_u32(reg_params[0].value, 0, 32, address);
 
-	init_reg_param(&reg_params[1], "a1", 32, PARAM_OUT);
+	init_reg_param(&reg_params[1], "r5", 32, PARAM_OUT);
 	buf_set_u32(reg_params[1].value, 0, 32, count);
 
 	int timeout = 20000 * (1 + (count / (1024 * 1024)));
@@ -764,13 +874,13 @@ int mips32_blank_check_memory(struct target *target,
 	mips32_info.common_magic = MIPS32_COMMON_MAGIC;
 	mips32_info.isa_mode = MIPS32_ISA_MIPS32;
 
-	init_reg_param(&reg_params[0], "a0", 32, PARAM_OUT);
+	init_reg_param(&reg_params[0], "r4", 32, PARAM_OUT);
 	buf_set_u32(reg_params[0].value, 0, 32, address);
 
-	init_reg_param(&reg_params[1], "a1", 32, PARAM_OUT);
+	init_reg_param(&reg_params[1], "r5", 32, PARAM_OUT);
 	buf_set_u32(reg_params[1].value, 0, 32, count);
 
-	init_reg_param(&reg_params[2], "a2", 32, PARAM_IN_OUT);
+	init_reg_param(&reg_params[2], "r6", 32, PARAM_IN_OUT);
 	buf_set_u32(reg_params[2].value, 0, 32, 0xff);
 
 	int retval = target_run_algorithm(target, 0, NULL, 3, reg_params,
@@ -790,8 +900,287 @@ int mips32_blank_check_memory(struct target *target,
 	return retval;
 }
 
+uint32_t DetermineCpuTypeFromPrid(uint32_t prid, uint32_t config, uint32_t config1) {
+
+	uint32_t cpuType;
+	/* Determine CPU type from PRID. */
+	if (((prid >> 16) & 0xff) == 16)
+		/* Altera */
+		return (uint32_t)MIPS_MP32;
+
+	if (((prid >> 16) & 0xff) == 2)
+		/* Broadcom */
+		return (uint32_t) MIPS_BCM;
+
+	if (((prid >> 16) & 0xff) == 3) {
+		/* AMD Alchemy processors */
+		switch ((prid >> 24) & 0xff)
+		{
+			case 0x00:
+				cpuType = MIPS_AU1000;
+				break;
+
+			case 0x01:
+				cpuType = MIPS_AU1500;
+				break;
+
+			case 0x02:
+				cpuType = MIPS_AU1100;
+				break;
+
+			case 0x03:
+				cpuType = MIPS_AU1550;
+				break;
+
+			case 0x04:
+				cpuType = MIPS_AU1200;
+				break;
+
+			default:
+				cpuType = CPUTYPE_UNKNOWN;
+				break;
+		} /* end of switch */
+
+		return cpuType;
+	}
+
+	switch ((prid >> 8) & 0xff)
+	{	/* MIPS Technologies cores */
+		case 0x80:
+			cpuType = MIPS_4Kc;
+			break;
+
+		case 0x81:
+			if (config1 & 1)
+				cpuType = MIPS_5Kf;	   /* fpu present */
+			else 
+				cpuType = MIPS_5Kc;
+			break;
+
+		case 0x82:
+			cpuType = MIPS_20Kc;
+			break;
+
+		case 0x83:
+			if ((config >> 20) & 1)
+				cpuType = MIPS_4Kp;
+			else
+				cpuType = MIPS_4Km;
+			break;
+					   
+		case 0x84:
+		case 0x90:
+			cpuType = MIPS_4KEc;
+			break;
+
+		case 0x85:
+		case 0x91:
+			if ((config >> 20) & 1) 
+				cpuType = MIPS_4KEp;
+			else
+				cpuType = MIPS_4KEm;
+			break;
+					   
+		case 0x86:
+			cpuType = MIPS_4KSc;
+			break;
+
+		case 0x87:
+			cpuType = MIPS_M4K;
+			break;
+
+		case 0x88:
+			cpuType = MIPS_25Kf;
+			break;
+
+		case 0x89:
+			if (config1 & 1)
+				cpuType = MIPS_5KEf;	   /* fpu present */
+			else
+				cpuType = MIPS_5KEc;
+			break;
+
+		case 0x92:
+			cpuType = MIPS_4KSd;
+			break;
+
+		case 0x93:
+			if (config1 & 1)
+				cpuType = MIPS_24Kf;	   /* fpu present */
+			else
+				cpuType = MIPS_24Kc;
+			break;
+
+		case 0x95:
+			if (config1 & 1)
+				cpuType = MIPS_34Kf;	   /* fpu present */
+			else {
+				/* In MT with a single-threaded FPU, Config1.FP may be 0   */
+				/* even though an FPU exists.  Scan all TC contexts and if */
+				/* any have Config1.FP, then set processor to 100Kf.	   */
+				/* skip it for now										   */
+				cpuType = MIPS_34Kc;
+			}
+			break;
+
+		case 0x96:
+			if (config1 & 1)
+				cpuType = MIPS_24KEf;	   /* fpu present */
+			else
+				cpuType = MIPS_24KEc;
+			break;
+
+		case 0x97:
+			if (config1 & 1)
+				cpuType = MIPS_74Kf;	   /* fpu present */
+			else 
+				cpuType = MIPS_74Kc;
+			break;
+
+		case 0x99:
+			if (config1 & 1) 
+				cpuType = MIPS_1004Kf;	   /* fpu present */
+			else {
+				/* In MT with a single-threaded FPU, Config1.FP may be 0   */
+				/* even though an FPU exists.  Scan all TC contexts and if */
+				/* any have Config1.FP, then set processor to 100Kf.	   */
+				/* skip it for now										   */
+				cpuType = MIPS_1004Kc;
+			}
+			break;
+
+		case 0x9A:
+			if (config1 & 1)
+				cpuType = MIPS_1074Kf;	   /* fpu present */
+			else {
+				/* In MT with a single-threaded FPU, Config1.FP may be 0   */
+				/* even though an FPU exists.  Scan all TC contexts and if */
+				/* any have Config1.FP, then set processor to 100Kf.	   */
+				/* skip it for now										   */
+				cpuType = MIPS_1074Kc;
+			}
+			break;
+
+		case 0x9B:
+			cpuType = MIPS_M14K;
+			break;
+
+		case 0x9C:
+			if (config1& 1)
+				cpuType = MIPS_M14Kf;	   /* fpu present */
+			else
+				cpuType = MIPS_M14Kc;
+			break;
+			   
+		case 0x9D:
+			if (config1 & 1)
+				cpuType = MIPS_M14KEf;
+			else
+				cpuType = MIPS_M14KE;
+			break;
+
+		case 0x9E:
+			if (config1 & 1)
+				cpuType = MIPS_M14KEcf;
+			else 
+				cpuType = MIPS_M14KEc;
+			break;
+
+		case 0xA0:
+			cpuType = MIPS_INTERAPTIV;
+			break;
+
+		case 0xA1:
+			cpuType = MIPS_INTERAPTIV_CM;
+			break;
+
+		case 0xA2:
+			cpuType = MIPS_PROAPTIV;
+			break;
+
+		case 0xA3:
+			cpuType = MIPS_PROAPTIV_CM;
+			break;
+
+		case 0xA6:
+			cpuType = MIPS_M5100;
+			break;
+
+		case 0xA7:
+			cpuType = MIPS_M5150;
+			break;
+
+		case 0xA8:
+			cpuType = MIPS_P5600;
+			break;
+
+		case 0xA9:
+			cpuType = MIPS_I5500;
+			break;
+
+		default:
+			cpuType = CPUTYPE_UNKNOWN;
+			break;
+	} /* end of switch */
+	
+	return (cpuType);
+}
+
+uint32_t DetermineGuestIdWidth(struct mips_ejtag *ejtag_info, uint32_t *width) {
+	// if GuestCtl1 is implemented {
+	//		save current GuestCtl1 value
+	//    write GuestCtl1, placing all-ones in the ID field
+	//    read GuestCtl1
+	//    in read value, count the consecutive number of 1 bits (starting from bit position 0)
+	//		restore GuestCtl1 value	
+	// } else width is 0
+
+	uint32_t err = ERROR_OK;
+	uint32_t err2 = ERROR_OK;
+	uint32_t count = 0;
+	bool guestCtl1Clobbered = false;
+	uint32_t guestCtl0 = 0;
+	uint32_t guestCtl1 = 0;
+	uint32_t tempReg = 0;
+
+	if ((err = mips32_cp0_read(ejtag_info, &guestCtl0, 12, 6)) != ERROR_OK) {
+		goto CLEANUP;
+	}
+	
+	if (((guestCtl0 >> 22) & 0x1) != 0) {
+		if ((err = mips32_cp0_read(ejtag_info, &guestCtl1, 10, 4)) != ERROR_OK) {
+			goto CLEANUP;
+		}
+
+		guestCtl1Clobbered = true;
+		tempReg = guestCtl1;
+		do {
+			tempReg = (((tempReg) & ~0xFF) | 0xFF);
+		} while (0);
+
+		if ((err = mips32_cp0_write(ejtag_info, tempReg, 10, 4)) != ERROR_OK) {
+			goto CLEANUP;
+		}
+		if ((err = mips32_cp0_read(ejtag_info, &tempReg, 10, 4)) != ERROR_OK) {
+			goto CLEANUP;
+		}
+		while (count < 8 && (tempReg & 0x1) != 0) {
+			count++;
+			tempReg >>= 1;
+		}
+	}
+
+CLEANUP:
+	if (guestCtl1Clobbered) {
+		// restore
+		err2 = mips32_cp0_write(ejtag_info, guestCtl1, 10, 4);
+	}
+	*width = count;
+	return (err != ERROR_OK ? err : err2);
+}
+
 static int mips32_verify_pointer(struct command_context *cmd_ctx,
-		struct mips32_common *mips32)
+				 struct mips32_common *mips32)
 {
 	if (mips32->common_magic != MIPS32_COMMON_MAGIC) {
 		command_print(cmd_ctx, "target is not an MIPS32");
@@ -846,7 +1235,7 @@ int mips32_cp0_command(struct command_invocation *cmd)
 	} else {
 		if (CMD_ARGC == 2) {
 			uint32_t value;
-			char tmp = *CMD_ARGV[0];
+			int tmp = *CMD_ARGV[0];
 
 			if (isdigit(tmp) == false) {
 				for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
@@ -931,6 +1320,605 @@ COMMAND_HANDLER(mips32_handle_cp0_command)
 	return mips32_cp0_command(cmd);
 }
 
+COMMAND_HANDLER(mips32_handle_cpuinfo_command)
+{
+	int retval;
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+
+	CPU_INFO info;
+
+	/* Will be added in the future */
+#if 0
+	/* MMU types */
+	uint32_t MMU_TLB = 0;
+	uint32_t MMU_BAT = 0;
+	uint32_t MMU_FMT = 0;
+	uint32_t MMU_RPU = 0;
+	uint32_t MMU_TLB_RPU = 0;
+#endif
+
+	char text[40]={0};
+	uint32_t ways, sets, bpl;
+
+	uint32_t	prid; /* cp0 PRID - 15, 0 */
+	uint32_t  config; /*	cp0 config - 16, 0 */
+	uint32_t config1; /*	cp0 config - 16, 1 */
+	uint32_t config2; /*	cp0 config - 16, 2 */
+	uint32_t config3; /*	cp0 config - 16, 3 */
+	uint32_t config4; /*	cp0 config - 16, 4 */
+	uint32_t config5; /*	cp0 config - 16, 5 */
+	uint32_t config7; /*	cp0 config - 16, 7 */
+
+	if (target->state != TARGET_HALTED) {
+		command_print(CMD_CTX, "target must be stopped for \"%s\" command", CMD_NAME);
+		return ERROR_OK;
+	}
+
+	/* No arg.s for now */
+	if (CMD_ARGC >= 1)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	/* Read PRID and config registers */
+	if ((retval = mips32_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK)
+		return retval;
+
+	/* Read Config, Config(1,2,3,5 and 7) registers */
+	if ((retval = mips32_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK)
+		return retval;
+
+	if ((retval = mips32_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK)
+		return retval;
+
+	if ((retval = mips32_cp0_read(ejtag_info, &config2, 16, 2))!= ERROR_OK)
+		return retval;
+
+	if ((retval = mips32_cp0_read(ejtag_info, &config3, 16, 3))!= ERROR_OK)
+		return retval;
+
+	if ((retval = mips32_cp0_read(ejtag_info, &config4, 16, 4))!= ERROR_OK)
+		return retval;
+
+	if ((retval = mips32_cp0_read(ejtag_info, &config5, 16, 5))!= ERROR_OK)
+		return retval;
+
+	if ((retval = mips32_cp0_read(ejtag_info, &config7, 16, 7))!= ERROR_OK)
+		return retval;
+
+	/* Read and store dspase and mtase (and other) architecture extension presence bits */
+	info.dspase = (config3 & 0x00000400) ? 1 : 0;		/* dsp ase */
+	info.mtase  = (config3 & 0x00000004) ? 1 : 0;		/* multithreading */
+
+	/* If multithreading then need to get more info */
+	/* TODO List */
+#if 0
+	if (info.mtase) {
+
+	}
+#endif
+
+	info.smase	= (config3 & 0x00000002) ? 1 : 0;		/* smartmips ase */
+	info.m16ase = (config1 & 0x00000004) ? 1 : 0;		/* mips16(e) ase */
+	info.micromipsase = ((config3 >> 14) & 0x3) != 0;
+	info.mmuType = (config >> 7) & 7;					/* MMU Type Info */
+	info.vzase = (config3 & (1<<23)) ? 1 : 0;			/* VZ */
+
+	/* Check if Virtualization supported */
+		/* TODO List */
+	if (info.vzase) {
+		/* Core supports Virtualization - now get Guest Info */
+		uint32_t width;
+		uint32_t guestCtl0;
+
+		if ((retval = mips32_cp0_read(ejtag_info, &guestCtl0, 12, 6)) != ERROR_OK)
+			return retval;
+
+		info.guestCtl1Present = (guestCtl0 >> 22) & 0x1;
+		
+		if ((retval = DetermineGuestIdWidth(ejtag_info, &width)) != ERROR_OK) {
+			return retval;
+		}
+
+		info.vzGuestIdWidth = width;
+   }
+
+	/* MIPS® SIMD Architecture (MSA) */
+	info.msa = (config3 & 0x10000000) ? 1 : 0;
+
+	info.mvh = (config5 & (1<<5)) ? 1 : 0;		/* mvh */
+
+	/* MMU Supported */
+	info.mmuType = (config >> 7) & 7;
+	info.tlbEntries = 0;
+#if 0
+	/*MMU types */
+	if ((info.mmuType == 3) && info.vzase) {
+		cpuinfo.tlbEntries = (U32)VTLB_SIZE;
+		FwGetTlbSize(handle, 0, &cpuinfo.tlbEntries);
+	}
+
+	MMU_TLB =  ((MMUTYPE == 1) || (MMUTYPE == 4));
+
+	if (info.mmuType)
+		MMU_BAT =  (MMUTYPE == 2);
+
+	if (info.mmuType)
+		MMU_FMT =  (MMUTYPE == 3);
+
+	if (info.mmuType)
+		MMU_RPU =  ((MMUTYPE == 3) && info.vzase);
+
+	if (info.mmuType)
+		MMU_TLB_RPU = (MMU_TLB || MMU_RPU);
+#endif
+
+	/* If release 2 of Arch. then get exception base info */
+	if (((config >> 10) & 7) != 0) {	/* release 2 */
+		uint32_t  ebase;
+		if ((retval = mips32_cp0_read(ejtag_info, &ebase, 15, 1))!= ERROR_OK)
+			return retval;
+
+		info.cpuid = (uint32_t)(ebase & 0x1ff);
+	} else {
+		info.cpuid = 0;
+	}
+
+	info.cpuType = DetermineCpuTypeFromPrid(prid, config, config1);
+
+	/* Determine Core info */
+	switch (info.cpuType) {
+	  case MIPS_4Kc:
+		  info.cpuCore = MIPS_4Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4Kc");
+		  break;
+
+	  case MIPS_4Km:
+		  info.cpuCore = MIPS_4Km;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4Km");
+		  break;
+
+	  case MIPS_4Kp:
+		  info.cpuCore = MIPS_4Kp;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4Kp");
+		  break;
+
+	  case MIPS_4KEc:
+		  info.cpuCore = MIPS_4KEc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4KEc");		  
+		  break;
+
+	  case MIPS_4KEm:
+		  info.cpuCore = MIPS_4KEm;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4KEm");
+		  break;
+	  case MIPS_4KEp:
+		  info.cpuCore = MIPS_4KEp;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4KEp");
+		  break;
+
+	  case MIPS_4KSc:
+		  info.cpuCore = MIPS_4KSc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4KSc");
+		  break;
+
+	  case MIPS_4KSd:
+		  info.cpuCore = MIPS_4KSd;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4KSd");
+		  break;
+
+	  case MIPS_M4K:
+		  info.cpuCore = MIPS_M4K;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "4K");
+		  break;
+
+	  case MIPS_24Kc:
+		  info.cpuCore = MIPS_24Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "24Kc");
+		  break;
+
+	  case MIPS_24Kf:
+		  info.cpuCore = MIPS_24Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "24Kf");
+		  break;
+
+	  case MIPS_24KEc:
+		  info.cpuCore = MIPS_24KEc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "24KEc");
+		  break;
+
+	  case MIPS_24KEf:
+		  info.cpuCore = MIPS_24KEf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "24KEf");
+		  break;
+
+	  case MIPS_34Kc:
+		  info.cpuCore = MIPS_34Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "34Kc");
+		  break;
+
+	  case MIPS_34Kf:
+		  info.cpuCore = MIPS_34Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "3Kf ");
+		  break;
+
+	  case MIPS_5Kc:
+		  info.cpuCore = MIPS_5Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS64;
+		  strcpy(text, "5Kc");
+		  break;
+
+	  case MIPS_5Kf:
+		  info.cpuCore = MIPS_5Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS64;
+		  strcpy(text, "5Kf");
+		  break;
+
+	  case MIPS_5KEc:
+		  info.cpuCore = MIPS_5KEc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS64;
+		  strcpy(text, "5KEc");
+		  break;
+
+	  case MIPS_5KEf:
+		  info.cpuCore = MIPS_5KEf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS64;
+		  strcpy(text, "5KEf");
+		  break;
+
+	  case MIPS_20Kc:
+		  info.cpuCore = MIPS_20Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS64;
+		  strcpy(text, "20Kc");
+		  break;
+
+	  case MIPS_25Kf:
+		  info.cpuCore = MIPS_25Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS64;
+		  strcpy(text, "25Kf");
+		  break;
+
+	  case MIPS_AU1000:
+		  info.cpuCore = MIPS_AU1000;
+		  info.vendor = ALCHEMY_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "AU1000");
+		  break;
+	  case MIPS_AU1100:
+		  info.cpuCore = MIPS_AU1100;
+		  info.vendor = ALCHEMY_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "AU1100");
+		  break;
+
+	  case MIPS_AU1200:
+		  info.cpuCore = MIPS_AU1200;
+		  info.vendor = ALCHEMY_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "AU1200");
+		  break;
+
+	  case MIPS_AU1500:
+		  info.cpuCore = MIPS_AU1500;
+		  info.vendor = ALCHEMY_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "AU1500");
+		  break;
+
+	  case MIPS_AU1550:
+		  info.cpuCore = MIPS_AU1550;
+		  info.vendor = ALCHEMY_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "AU1550");
+		  break;
+
+	  case MIPS_74Kc:
+		  info.cpuCore = MIPS_74Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "74Kc");
+		  break;
+
+	  case MIPS_74Kf:
+		  info.cpuCore = MIPS_74Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "74Kf");
+		  break;
+
+	  case MIPS_84Kc:
+		  info.cpuCore = MIPS_84Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "84Kc");
+		  break;
+
+	  case MIPS_84Kf:
+		  info.cpuCore = MIPS_84Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "84Kf");
+		  break;
+
+	  case MIPS_M14K:
+		  info.cpuCore = MIPS_M14K;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "M14K");
+		  break;
+
+	  case MIPS_M14Kc:
+		  info.cpuCore = MIPS_M14Kc;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "M14Kc");
+		  break;
+
+	  case MIPS_M14Kf:
+		  info.cpuCore = MIPS_M14Kf;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "M14Kf");
+		  break;
+
+	  case MIPS_M14KE:
+		  info.cpuCore = MIPS_M14KE;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "microAptiv_UC");
+		  break;
+
+	  case MIPS_M14KEf:
+		  info.cpuCore = MIPS_M14KEf;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "microAptiv_UCF");
+		  break;
+
+	  case MIPS_M14KEc:
+		  info.cpuCore = MIPS_M14KEc;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "microAptiv_UP");
+		  break;
+
+	  case MIPS_M14KEcf:
+		  info.cpuCore = MIPS_M14KEcf;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "microAptiv_UPF");
+		  break;
+
+	  case MIPS_M5100:
+		  info.cpuCore = MIPS_M5100;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "M5100");
+		  break;
+
+	  case MIPS_M5150:
+		  info.cpuCore = MIPS_M5150;
+		  info.vendor = MIPS_CORE;
+		  /*		  if ((err = GetM14KInstSet(handle, &info.instSet)) != SUCCESS) return err; */
+		  strcpy(text, "M5150");
+		  break;
+
+	  case MIPS_BCM:
+		  info.cpuCore = MIPS_BCM;
+		  info.vendor = BROADCOM_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "BCM");
+		  break;
+
+	  case MIPS_MP32:
+		  info.cpuCore = MIPS_MP32;
+		  info.vendor = ALTERA_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "MP32");
+		  break;
+
+	  case MIPS_1004Kc:
+		  info.cpuCore = MIPS_1004Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "1004Kc");
+		  break;
+
+	  case MIPS_1004Kf:
+		  info.cpuCore = MIPS_1004Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "1004Kf");
+		  break;
+
+	  case MIPS_1074Kc:
+		  info.cpuCore = MIPS_1074Kc;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "1074Kc");
+		  break;
+
+	  case MIPS_1074Kf:
+		  info.cpuCore = MIPS_1074Kf;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "1074Kf");
+		  break;
+
+	  case MIPS_PROAPTIV:
+		  info.cpuCore = MIPS_PROAPTIV;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "PROAPTIV");
+		  break;
+
+	  case MIPS_PROAPTIV_CM:
+		  info.cpuCore = MIPS_PROAPTIV_CM;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "PROAPTIV_CM");
+		  break;
+
+	  case MIPS_INTERAPTIV:
+		  info.cpuCore = MIPS_INTERAPTIV;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "INTERAPTIV");
+		  break;
+
+	  case MIPS_INTERAPTIV_CM:
+		  info.cpuCore = MIPS_INTERAPTIV_CM;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "INTERAPTIV_CM");
+		  break;
+
+	  case MIPS_P5600:
+		  info.cpuCore = MIPS_P5600;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "P5600");
+		  break;
+
+	  case MIPS_I5500:
+		  info.cpuCore = MIPS_I5500;
+		  info.vendor = MIPS_CORE;
+		  info.instSet = MIPS32;
+		  strcpy(text, "I5500");
+		  break;
+	}
+
+	/* Determine Instr Cache Size */
+	ways = wayTable[(config1 >> CFG1_IASHIFT) & 7];
+	sets = setTableISDS[(config1 >> CFG1_ISSHIFT) & 7];
+	bpl  = bplTable[(config1 >> CFG1_ILSHIFT) & 7];
+	info.iCacheSize = ways*sets*bpl;
+
+	/* Determine data cache size */
+	ways = wayTable[(config1 >>  CFG1_DASHIFT) & 7];
+	sets = setTableISDS[(config1 >> CFG1_DSSHIFT) & 7];
+	bpl  = bplTable[(config1 >> CFG1_DLSHIFT) & 7];
+	info.dCacheSize = ways*sets*bpl;
+
+	/* Display Core Type info */
+	LOG_USER ("cpuCore: MIPS_%s", &text[0]);
+
+	LOG_USER ("cputype: %d", info.cpuType);
+
+	/* Display Core Vendor ID */
+	switch (info.vendor) {
+		case MIPS_CORE:
+			strcpy(text, "MIPS");
+			break;
+
+		case ALCHEMY_CORE:
+			strcpy(text, "Alchemy");
+			break;
+
+		case BROADCOM_CORE:
+			strcpy(text, "Broadcom");
+			break;
+
+		case ALTERA_CORE:
+			strcpy(text, "Altera");
+			break;
+
+		default:
+			sprintf (text, "Unknown CPU vendor code %u.", ((prid & 0x00ffff00) >> 16));
+			break;
+	}
+
+	/* Display Core Vendor */
+	LOG_USER (" vendor: %s", &text[0]);
+	LOG_USER ("  cpuid: %d", info.cpuid);
+	switch ((((config3 & 0x0000C000) >>  14)))
+	{
+		case 0:
+			strcpy (text, "MIPS32");
+			break;
+		case 1:
+			strcpy (text, "microMIPS");
+			break;
+		case 2:
+			strcpy (text, "MIPS32 (at reset) and microMIPS");
+			break;
+
+		case 3:
+			strcpy (text, "microMIPS (at reset) and MIPS32");
+			break;
+	}
+
+	/* Display Instruction Set Info */
+	LOG_USER ("instr Set: %s", &text[0]);
+
+	LOG_USER ("Instr Cache: %d", info.iCacheSize);
+	LOG_USER (" Data Cache: %d", info.dCacheSize);
+
+	LOG_USER ("Max Number of Instr Breakpoints: %d", mips32->num_inst_bpoints);
+	LOG_USER ("Max Number of  Data Breakpoints: %d", mips32->num_data_bpoints);
+
+	if (info.dspase)
+		strcpy(text, "true");
+	else
+		strcpy(text, "false");
+
+	LOG_USER ("dsp: %s", &text[0]);
+
+	/* MIPS® SIMD Architecture (MSA) */
+	if (info.msa)
+		strcpy(text, "true");
+	else
+		strcpy(text, "false");
+
+	LOG_USER ("msa: %s", &text[0]);
+
+	/*Move To/From High COP0 (MTHC0/MFHC0) instructions are implemented. */
+	if (info.mvh)
+		strcpy(text, "true");
+	else
+		strcpy(text, "false");
+
+	LOG_USER ("mvh: %s", &text[0]);
+
+	return ERROR_OK;
+}
+
 COMMAND_HANDLER(mips32_handle_dsp_command)
 {
 	int retval;
@@ -947,7 +1935,11 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 		return ERROR_OK;
 	}
 
-	LOG_INFO ("mips32->mmips = %x   mips32->dsp_implemented = %x",mips32->mmips, mips32->dsp_implemented);
+	/* Check for too many command arg.s */
+	if (CMD_ARGC >= 3) 
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+//	LOG_INFO ("mips32->mmips = %x   mips32->dsp_implemented = %x, mips32->dsp_rev = %x",mips32->mmips, mips32->dsp_implemented, mips32->dsp_rev);
 	/* Check if DSP access supported or not */
 	if (mips32->dsp_implemented == DSP_NOT_IMP) {
 
@@ -956,8 +1948,8 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 		return ERROR_OK;
 	}
 
-	if (mips32->dsp_rev != DSP_REV2) {
-		command_print(CMD_CTX, "only DSP Rev 2 supported by this processor");
+	if (mips32->dsp_rev == DSP_REV1) {
+		command_print(CMD_CTX, "DSP Rev 1 not supported");
 		return ERROR_OK;
 	}
 
@@ -968,7 +1960,7 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 		if (CMD_ARGC == 0) {
 			value = 0;
 			for (int i = 0; i < MIPS32NUMDSPREGS; i++) {
-				retval = mips32_pracc_read_dsp_regs(ejtag_info, &value, mips32_dsp_regs[i].reg);
+				retval = mips32_pracc_read_dsp_regs(ejtag_info, &value, i);
 				if (retval != ERROR_OK) {
 					command_print(CMD_CTX, "couldn't access reg %s", mips32_dsp_regs[i].name);
 					return retval;
@@ -976,11 +1968,10 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 				command_print(CMD_CTX, "%*s: 0x%8.8x", 7, mips32_dsp_regs[i].name, value);
 			}
 		} else {
-			value = 0;
 			for (int i = 0; i < MIPS32NUMDSPREGS; i++) {
 				/* find register name */
 				if (strcmp(mips32_dsp_regs[i].name, CMD_ARGV[0]) == 0) {
-					retval = mips32_pracc_read_dsp_regs(ejtag_info, &value, mips32_dsp_regs[i].reg);
+					retval = mips32_pracc_read_dsp_regs(ejtag_info, &value, i);
 					command_print(CMD_CTX, "0x%8.8x", value);
 					return retval;
 				}
@@ -992,14 +1983,14 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 	} else {
 		if (CMD_ARGC == 2) {
 			uint32_t value;
-			char tmp = *CMD_ARGV[0];
+			int tmp = *CMD_ARGV[0];
 
 			if (isdigit(tmp) == false) {
 				for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
 					/* find register name */
 					if (strcmp(mips32_dsp_regs[i].name, CMD_ARGV[0]) == 0) {
 						COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], value);
-						retval = mips32_pracc_write_dsp_regs(ejtag_info, value, mips32_dsp_regs[i].reg);
+						retval = mips32_pracc_write_dsp_regs(ejtag_info, value, i);
 						return retval;
 					}
 				}
@@ -1007,8 +1998,6 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 				LOG_ERROR("BUG: register '%s' not found", CMD_ARGV[0]);
 				return ERROR_COMMAND_SYNTAX_ERROR;
 			}
-		} else if (CMD_ARGC == 3) {
-			return ERROR_COMMAND_SYNTAX_ERROR;
 		}
 	}
 
@@ -1141,6 +2130,49 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 	return ERROR_OK;
 }
 
+extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
+COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+
+	uint32_t idcode;
+	uint32_t impcode;
+	uint32_t ejtag_ctrl;
+	int retval;
+
+	retval = mips_ejtag_get_idcode(ejtag_info, &idcode);
+	retval = mips_ejtag_get_impcode (ejtag_info, &impcode);
+	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
+	ejtag_ctrl = ejtag_info->ejtag_ctrl;
+	retval = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
+
+	if (retval != ERROR_OK)
+		LOG_INFO("Encounter an Error");
+
+	LOG_USER ("       idcode: 0x%8.8x", idcode);
+	LOG_USER ("      impcode: 0x%8.8x", impcode);
+	LOG_USER ("ejtag control: 0x%8.8x", ejtag_ctrl);
+
+#if 0
+	if (CMD_ARGC == 1)
+		COMMAND_PARSE_NUMBER(uint, CMD_ARGV[0], ejtag_info->scan_delay);
+	else if (CMD_ARGC > 1)
+			return ERROR_COMMAND_SYNTAX_ERROR;
+
+	command_print(CMD_CTX, "scan delay: %d nsec", ejtag_info->scan_delay);
+	if (ejtag_info->scan_delay >= MIPS32_SCAN_DELAY_LEGACY_MODE) {
+		ejtag_info->mode = 0;
+		command_print(CMD_CTX, "running in legacy mode");
+	} else {
+		ejtag_info->mode = 1;
+		command_print(CMD_CTX, "running in fast queued mode");
+	}
+#endif
+	return ERROR_OK;
+}
+
 COMMAND_HANDLER(mips32_handle_scan_delay_command)
 {
 	return mips32_scan_delay_command(cmd);
@@ -1153,6 +2185,21 @@ static const struct command_registration mips32_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.help = "display/modify cp0 register(s)",
 		.usage = "[[reg_name|regnum select] [value]]",
+	},
+	{
+		.name = "cpuinfo",
+		.handler = mips32_handle_cpuinfo_command,
+		.mode = COMMAND_EXEC,
+		.help = "cpuinfo displays information for the current CPU core.",
+		.usage = "cpuinfo",
+	},
+	{
+		.name = "dsp",
+		.handler = mips32_handle_dsp_command,
+		.mode = COMMAND_EXEC,
+		.help = "display or set DSP register; "
+		"with no arguments, displays all registers and their values",
+		.usage = "[register_name] [value]]",
 	},
 	{
 		.name = "invalidate",
@@ -1169,12 +2216,11 @@ static const struct command_registration mips32_exec_command_handlers[] = {
 		.usage = "[value]",
 	},
 	{
-		.name = "dsp",
-		.handler = mips32_handle_dsp_command,
-		.mode = COMMAND_EXEC,
-		.help = "display or set DSP register; "
-		"with no arguments, displays all registers and their values",
-		.usage = "[(register_number|register_name) [value]]",
+		.name = "ejtag_reg",
+		.handler = mips32_handle_ejtag_reg_command,
+		.mode = COMMAND_ANY,
+		.help = "read ejtag registers",
+		.usage = "",
 	},
 	COMMAND_REGISTRATION_DONE
 };

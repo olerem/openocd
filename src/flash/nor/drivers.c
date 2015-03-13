@@ -43,6 +43,7 @@ extern struct flash_driver stm32lx_flash;
 extern struct flash_driver tms470_flash;
 extern struct flash_driver ocl_flash;
 extern struct flash_driver pic32mx_flash;
+extern struct flash_driver pic32mz_flash;
 extern struct flash_driver avr_flash;
 extern struct flash_driver faux_flash;
 extern struct flash_driver virtual_flash;
@@ -84,6 +85,7 @@ static struct flash_driver *flash_drivers[] = {
 	&tms470_flash,
 	&ocl_flash,
 	&pic32mx_flash,
+	&pic32mz_flash,
 	&avr_flash,
 	&faux_flash,
 	&virtual_flash,

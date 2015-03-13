@@ -94,6 +94,7 @@ extern struct target_type cortexr4_target;
 extern struct target_type arm11_target;
 extern struct target_type mips_m4k_target;
 extern struct target_type mips_mAptiv_target;
+extern struct target_type mips_iAptiv_target;
 extern struct target_type avr_target;
 extern struct target_type dsp563xx_target;
 extern struct target_type dsp5680xx_target;
@@ -124,6 +125,7 @@ static struct target_type *target_types[] = {
 	&arm11_target,
 	&mips_m4k_target,
 	&mips_mAptiv_target,
+	&mips_iAptiv_target,
 	&avr_target,
 	&dsp563xx_target,
 	&dsp5680xx_target,
@@ -1145,7 +1147,8 @@ int target_profiling(struct target *target, uint32_t *samples,
  * Reset the @c examined flag for the given target.
  * Pure paranoia -- targets are zeroed on allocation.
  */
-static void target_reset_examined(struct target *target)
+//static void target_reset_examined(struct target *target)
+void target_reset_examined(struct target *target)
 {
 	target->examined = false;
 }

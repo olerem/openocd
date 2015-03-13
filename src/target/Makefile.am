@@ -111,6 +111,7 @@ MIPS32_SRC = \
 	mips_common.c \
 	mips_m4k.c \
 	mips_mAptiv.c \
+	mips_iAptiv.c \
 	mips32_pracc.c \
 	mips32_dmaacc.c \
 	mips_ejtag.c
