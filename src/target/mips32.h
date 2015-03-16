@@ -72,52 +72,126 @@ enum {
 	MIPS32NUMCOREREGS
 };
 
-#define MIPS32NUMCP0REGS 38
-#define MIPS32NUMDSPREGS 7
+#define MIPS32NUMDSPREGS 9
+
+#define MIPS32NUMCP0REGS 104
+
+/* Bit Mask indicating CP0 register supported by this core */
+#define	MIPS_CP0_MK4		0x0001
+#define	MIPS_CP0_mAPTIV_uC	0x0002
+#define	MIPS_CP0_mAPTIV_uP	0x0004
+#define MIPS_CP0_iAPTIV		0x0008
 
 static const struct {
 	unsigned reg;
 	unsigned sel;
 	const char *name;
+	const unsigned core;
 } mips32_cp0_regs[MIPS32NUMCP0REGS] = {
-	{ 4, 2, "userlocal"},
-	{ 7, 0, "hwrena"},
-	{ 8, 0, "badvaddr"},
-	{ 9, 0, "count"},
-	{11, 0, "compare"},
-	{12, 0, "status"},
-	{12, 1, "intctl"},
-	{12, 2, "srsctl"},
-	{12, 4, "view_ipl"},
-	{13, 0, "cause"},
-	{13, 5, "nestedexc"},
-	{14, 0, "epc"},
-	{14, 2, "nestedepc"},
-	{15, 0, "prid"},
-	{15, 1, "ebase"},
-	{15, 2, "cdmmbase"},
-	{16, 0, "config"},
-	{16, 1, "config1"},
-	{16, 2, "config2"},
-	{16, 3, "config3"},
-	{16, 4, "config4"},
-	{16, 5, "config5"},
-	{16, 7, "config7"},
-	{17, 0, "lladdr"},
-	{23, 0, "debug"},
-	{23, 1, "tracecontrol"},
-	{23, 2, "tracecontrol2"},
-	{23, 3, "usertracedata1"},
-	{23, 4, "tracebpc"},
-	{24, 0, "depc"},
-	{24, 3, "usertracedata2"},
-	{25, 0, "perfctl0"},
-	{25, 1, "perfcnt0"},
-	{25, 2, "perfctl1"},
-	{25, 3, "perfcnt1"},
-	{26, 0, "errctl"},
-	{30, 0, "errorepc"},
-	{31, 0, "desave"},
+	{0, 0, "index", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{0, 1, "mvpcontrol", MIPS_CP0_iAPTIV},
+	{0, 2, "mvpconf0", MIPS_CP0_iAPTIV},
+	{0, 3, "mvpconf1", MIPS_CP0_iAPTIV},
+	{1, 0, "random", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{1, 1, "vpecontrol", MIPS_CP0_iAPTIV},
+	{1, 2, "vpeconf0", MIPS_CP0_iAPTIV},
+	{1, 3, "vpeconf1", MIPS_CP0_iAPTIV},
+	{1, 4, "yqmask", MIPS_CP0_iAPTIV},
+	{1, 5, "vpeschedule", MIPS_CP0_iAPTIV},
+	{1, 6, "vpeschefback", MIPS_CP0_iAPTIV},
+	{1, 7, "vpeopt", MIPS_CP0_iAPTIV},
+	{2, 0, "entrylo0", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{2, 1, "tcstatus", MIPS_CP0_iAPTIV},
+	{2, 2, "tcbind", MIPS_CP0_iAPTIV},
+	{2, 3, "tcrestart", MIPS_CP0_iAPTIV},
+	{2, 4, "tchalt", MIPS_CP0_iAPTIV},
+	{2, 5, "tccontext", MIPS_CP0_iAPTIV},
+	{2, 6, "tcschedule", MIPS_CP0_iAPTIV},
+	{2, 7, "tcschefback", MIPS_CP0_iAPTIV},
+	{3, 0, "entrylo1",MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{3, 7, "tcopt", MIPS_CP0_iAPTIV},
+	{4, 0, "context", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{4, 2, "userlocal", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{5, 0, "pagemask", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{5, 1, "pagegrain", MIPS_CP0_mAPTIV_uP},
+	{5, 2, "segctl0", MIPS_CP0_iAPTIV},
+	{5, 3, "segctl1", MIPS_CP0_iAPTIV},
+	{5, 4, "segctl2", MIPS_CP0_iAPTIV},
+	{6, 0, "wired", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{6, 1, "srsconf0", MIPS_CP0_iAPTIV},
+	{6, 2, "srsconf1", MIPS_CP0_iAPTIV},
+	{6, 3, "srsconf2", MIPS_CP0_iAPTIV},
+	{6, 4, "srsconf3", MIPS_CP0_iAPTIV},
+	{6, 5, "srsconf4", MIPS_CP0_iAPTIV},
+	{7, 0, "hwrena", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{8, 0, "badvaddr", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{8, 1, "badinstr", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP},
+	{8, 2, "badinstrp", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP},
+	{9, 0, "count", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{10, 0, "entryhi", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP},
+	{11, 0, "compare", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{12, 0, "status", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{12, 1, "intctl", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{12, 2, "srsctl", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{12, 3, "srsmap", MIPS_CP0_iAPTIV},
+	{12, 3, "srsmap1", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP},
+	{12, 4, "view_ipl", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{12, 5, "srsmap2", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP},
+	{13, 0, "cause", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{13, 5, "nestedexc", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP| MIPS_CP0_MK4},
+	{14, 0, "epc", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{14, 2, "nestedepc", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{15, 0, "prid", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{15, 1, "ebase", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{15, 2, "cdmmbase", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{15, 3, "cmgcrbase", MIPS_CP0_iAPTIV},
+	{16, 0, "config", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{16, 1, "config1", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{16, 2, "config2", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{16, 3, "config3", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{16, 4, "config4", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{16, 5, "config5", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{16, 7, "config7", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{17, 0, "lladdr", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{18, 0, "watchlo0", MIPS_CP0_iAPTIV},
+	{18, 1, "watchlo1", MIPS_CP0_iAPTIV},
+	{18, 2, "watchlo2", MIPS_CP0_iAPTIV},
+	{18, 3, "watchlo3", MIPS_CP0_iAPTIV},
+	{19, 0, "watchhi0", MIPS_CP0_iAPTIV},
+	{19, 1, "watchhi1", MIPS_CP0_iAPTIV},
+	{19, 2, "watchhi2", MIPS_CP0_iAPTIV},
+	{19, 3, "watchhi3", MIPS_CP0_iAPTIV},
+	{23, 0, "debug", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{23, 1, "tracecontrol", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{23, 2, "tracecontrol2", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{23, 3, "usertracedata1", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{23, 4, "tracebpc", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{23, 4, "traceibpc", MIPS_CP0_iAPTIV},
+	{23, 5, "tracedbpc", MIPS_CP0_iAPTIV},
+	{24, 0, "depc", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{24, 2, "tracecontrol3", MIPS_CP0_iAPTIV},
+	{24, 3, "usertracedata2", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{25, 0, "perfctl0", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{25, 1, "perfcnt0", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{25, 2, "perfctl1", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{25, 3, "perfcnt1", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{26, 0, "errctl", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{27, 0, "cacheerr", MIPS_CP0_iAPTIV},
+	{28, 0, "itaglo", MIPS_CP0_iAPTIV},
+	{28, 0, "taglo", MIPS_CP0_iAPTIV},
+	{28, 1, "idatalo", MIPS_CP0_iAPTIV},
+	{28, 1, "datalo", MIPS_CP0_iAPTIV},
+	{28, 2, "dtaglo", MIPS_CP0_iAPTIV},
+	{28, 3, "ddatalo", MIPS_CP0_iAPTIV},
+	{28, 4, "l23taglo", MIPS_CP0_iAPTIV},
+	{28, 5, "l23datalo", MIPS_CP0_iAPTIV},
+	{29, 1, "idatahi", MIPS_CP0_iAPTIV},
+	{29, 2, "dtaghi", MIPS_CP0_iAPTIV},
+	{29, 5, "l23datahi", MIPS_CP0_iAPTIV},
+	{30, 0, "errorepc", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{31, 0, "desave", MIPS_CP0_iAPTIV | MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP | MIPS_CP0_MK4},
+	{31, 2, "kscratch1", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP},
+	{31, 3, "kscratch2", MIPS_CP0_mAPTIV_uC | MIPS_CP0_mAPTIV_uP},
 };
 enum mips32_isa_mode {
 	MIPS32_ISA_MIPS32 = 0,
@@ -157,6 +231,10 @@ struct mips32_common {
 	enum micro_mips_enabled mmips;
 	enum dsp dsp_implemented;
 	enum dsp_rev dsp_rev;
+
+	/* Mask used to determine is CP0 name valid for core */
+	/* note hard coded for M4K to support backward compatibility */
+	uint32_t cp0_mask;
 
 	/* working area for fastdata access */
 	struct working_area *fast_data_area;
@@ -373,6 +451,40 @@ struct mips32_algorithm {
 #define Fetch_Lock_D					 0x1D		 /* 7		1 */
 
 /*
+ *    Cache Coherency Attribute
+ *    
+ *    0 Cacheable, noncoherent, write-through, no write allocate (microAptiv)
+ *    0 Reserved (interAptiv)
+ *
+ *	  1 Cacheable, noncoherent, write-through, write allocate (microAptiv)
+ *	  1 Reserved (interAptiv)
+ *
+ *	  2 Uncached (microAptiv, interAptiv)
+ *
+ *	  3 Cacheable, noncoherent, write-back, write allocate (microAptiv, interAptiv)
+ *
+ *	  4 Cacheable, coherent, write-back, write-allocate, read misses request Exclusive (interAptiv)
+ *	  4 Cacheable, noncoherent, write-back, write allocate (interAptiv)
+ *
+ *	  5 Cacheable, noncoherent, write-back, write allocate (microAptiv)
+ *	  5 Cacheable, coherent, write-back, write-allocate, read misses request Shared (interAptiv)
+ *
+ *	  6 Cacheable, noncoherent, write-back, write allocate (microAptiv)
+ *	  6 Reserved (interAptiv)
+ *
+ *	  7 Uncached (microAptiv, interAptiv)
+ */
+
+#define CCA_WT_NOWA     0
+#define CCA_WT_WA       1
+#define CCA_UC          2
+#define CCA_WB          3
+#define CCA_IAPTIV_CWBE 4
+#define CCA_IAPTIV_CWB  5
+#define CCA_IAPTIV_RES  6
+#define CCA_IAPTIV_UCA  7
+
+/*
  * MIPS32 Coprocessor 0 register numbers
  */
 #define C0_INDEX		0
@@ -462,7 +574,8 @@ struct mips32_algorithm {
 #define MIPS32_OP_XOR	0x26
 #define MIPS32_OP_SLTU  0x2B
 #define MIPS32_OP_SLLV	0x04
-#define MIPS32_OP_SRL	0x03
+#define MIPS32_OP_SRA	0x03
+#define MIPS32_OP_SRL	0x02
 #define MIPS32_OP_SYNCI	0x1F
 
 #define MIPS32_OP_REGIMM	0x01
@@ -492,8 +605,8 @@ struct mips32_algorithm {
 #define MIPS32_BGTZ(reg, off)			MIPS32_I_INST(MIPS32_OP_BGTZ, reg, 0, off)
 #define MIPS32_BNE(src, tar, off)		MIPS32_I_INST(MIPS32_OP_BNE, src, tar, off)
 #define MIPS32_CACHE(op, off, base)		MIPS32_I_INST(MIPS32_OP_CACHE, base, op, off)
-#define MIPS32_EXT(dst, src, shf, sz)	MIPS32_R_INST(MIPS32_OP_EXT, src, dst, (sz-1), shf, 0)
-#define MIPS32_J(tar)				MIPS32_J_INST(MIPS32_OP_J, tar)
+#define MIPS32_EXT(dst, src, shf, sz)		MIPS32_R_INST(MIPS32_OP_EXT, src, dst, (sz-1), shf, 0)
+#define MIPS32_J(tar)					MIPS32_J_INST(MIPS32_OP_J, tar)
 #define MIPS32_JR(reg)					MIPS32_R_INST(0, reg, 0, 0, 0, MIPS32_OP_JR)
 #define MIPS32_MFC0(gpr, cpr, sel)		MIPS32_R_INST(MIPS32_OP_COP0, MIPS32_COP0_MF, gpr, cpr, 0, sel)
 #define MIPS32_MOVE(dst, src)			MIPS32_R_INST(17, 16, 0, src, dst, 6)
@@ -515,6 +628,7 @@ struct mips32_algorithm {
 #define MIPS32_SH(reg, off, base)		MIPS32_I_INST(MIPS32_OP_SH, base, reg, off)
 #define MIPS32_SW(reg, off, base)		MIPS32_I_INST(MIPS32_OP_SW, base, reg, off)
 #define MIPS32_XOR(reg, val1, val2)		MIPS32_R_INST(0, val1, val2, reg, 0, MIPS32_OP_XOR)
+#define MIPS32_SRA(reg, src, off)		MIPS32_R_INST(0, 0, src, reg, off, MIPS32_OP_SRL)
 #define MIPS32_SRL(reg, src, off)		MIPS32_R_INST(0, 0, src, reg, off, MIPS32_OP_SRL)
 #define MIPS32_SLTU(dst, src, tar)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLTU)
 #define MIPS32_SLLV(dst, tar, src)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLLV)
@@ -538,31 +652,22 @@ struct mips32_algorithm {
 #define MIPS16_SDBBP				0xE801
 #define MICRO_MIPS32_SDBBP			0x000046C0
 #define MICRO_MIPS_SDBBP			0x46C0
-#define MIPS32_DSP_ENABLE	0x1000000
+#define MIPS32_DSP_ENABLE			0x1000000
 
-#define MICRO_MIPS_OP_MFHI	0x007C
-#define MICRO_MIPS_OP_MFLO	0x107C
+#define MIPS32_S_INST(rs, rac, opcode)			\
+	(((rs) << 21) | ((rac) << 11) | (opcode))
 
-#define MICRO_MIPS_OP_MTHI	0x207C
-#define MICRO_MIPS_OP_MTLO	0x307C
+#define MIPS32_DSP_R_INST(rt, immd, opcode, extrw) \
+	((0x1F << 26) | ((immd) << 16) | ((rt) << 11) | ((opcode) << 6) | (extrw))
+#define MIPS32_DSP_W_INST(rs, immd, opcode, extrw) \
+	((0x1F << 26) | ((rs) << 21) | ((immd) << 11) | ((opcode) << 6) | (extrw))
 
-#define MICRO_DSP_I_INST(rs, ac, opcode) \
-	((0 << 21) | ((rs) << 16) | ((ac) << 14) | (opcode))
-
-#define MICRO_DSP_MFLO(reg, ac)	MICRO_DSP_I_INST(reg, ac, MICRO_MIPS_OP_MFLO)
-#define MICRO_DSP_MFHI(reg, ac)	MICRO_DSP_I_INST(reg, ac, MICRO_MIPS_OP_MFHI)
-#define MICRO_DSP_MTLO(reg, ac)	MICRO_DSP_I_INST(reg, ac, MICRO_MIPS_OP_MTLO)
-#define MICRO_DSP_MTHI(reg, ac)	MICRO_DSP_I_INST(reg, ac, MICRO_MIPS_OP_MTHI)
-
-
-#define MICRO_MIPS_OP_RDDSP		0x067C
-#define MICRO_MIPS_OP_WRDSP		0x167C
-
-#define MICRO_DSP_R_INST(rt, mask, opcode) \
-	((0 << 26) | ((rt) << 21) | ((mask) << 14) | (opcode))
-
-#define MICRO_DSP_RDDSP(rt, mask)	MICRO_DSP_R_INST(rt, mask, MICRO_MIPS_OP_RDDSP)
-#define MICRO_DSP_WRDSP(rt, mask)	MICRO_DSP_R_INST(rt, mask, MICRO_MIPS_OP_WRDSP)
+#define MIPS32_DSP_MFHI(reg,ac)		MIPS32_R_INST(0, ac, 0, reg, 0, MIPS32_OP_MFHI)
+#define MIPS32_DSP_MFLO(reg, ac)	MIPS32_R_INST(0, ac, 0, reg, 0, MIPS32_OP_MFLO)
+#define MIPS32_DSP_MTLO(reg, ac)	MIPS32_S_INST(reg, ac, MIPS32_OP_MTLO)
+#define MIPS32_DSP_MTHI(reg, ac)	MIPS32_S_INST(reg, ac, MIPS32_OP_MTHI)
+#define MIPS32_DSP_RDDSP(rt, mask)	MIPS32_DSP_R_INST(rt, mask, 0x12, 0x38)
+#define MIPS32_DSP_WRDSP(rs, mask)	MIPS32_DSP_W_INST(rs, mask, 0x13, 0x38)
 
 //CPU types
 //NOTE!	 If any cores added, must also add in mdi/mdi_internal.c
@@ -797,6 +902,7 @@ int mips32_checksum_memory(struct target *target, uint32_t address,
 int mips32_blank_check_memory(struct target *target,
 		uint32_t address, uint32_t count, uint32_t *blank);
 
+uint32_t DetermineCpuTypeFromPrid(uint32_t prid, uint32_t config, uint32_t config1);
 int mips32_cp0_command(struct command_invocation *cmd);
 int mips32_scan_delay_command(struct command_invocation *cmd);
 #endif	/*MIPS32_H*/
