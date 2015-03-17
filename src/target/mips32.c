@@ -4,7 +4,7 @@
  *                                                                         *
  *   Copyright (C) 2008 by David T.L. Wong                                 *
  *                                                                         *
- *   Copyright (C) 2007,2008 Ã˜yvind Harboe                                 *
+ *   Copyright (C) 2007,2008 Ã˜yvind Harboe                             *
  *   oyvind.harboe@zylin.com                                               *
  *                                                                         *
  *   Copyright (C) 2011 by Drasko DRASKOVIC                                *
@@ -43,7 +43,6 @@ static const char *mips_isa_strings[] = {
 };
 
 #define MIPS32_GDB_DUMMY_FP_REG 1
-
 
 static const struct {
 	unsigned option;
@@ -177,9 +176,11 @@ static const struct {
 static const struct {
 	const char *name;
 } mips32_dsp_regs[MIPS32NUMDSPREGS] = {
+	{ "hi0"},
 	{ "hi1"},
 	{ "hi2"},
 	{ "hi3"},
+	{ "lo0"},
 	{ "lo1"},
 	{ "lo2"},
 	{ "lo3"},
@@ -350,21 +351,54 @@ int mips32_restore_context(struct target *target)
 
 int mips32_arch_state(struct target *target)
 {
+	LOG_DEBUG("mips32_arch_state");
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
 	int retval;
+
+	uint32_t	prid; /* cp0 PRID - 15, 0 */
+	uint32_t config;
 	uint32_t config3;
-	uint32_t cp0_reg = 16;
-	uint32_t cp0_sel = 3;
-	retval = mips32_cp0_read(ejtag_info, &config3, cp0_reg, cp0_sel);
+	uint32_t config1;
+
+	/* Read PRID registers */
+	if ((retval = mips32_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK) {
+		LOG_DEBUG("READ of PRID Failed");
+		return retval;
+	}
+
+	/* Read Config registers */
+	if ((retval = mips32_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK) {
+		LOG_DEBUG("Read of Config reg Failed");
+		return retval;
+	}
+
+	/* Read Config1 registers */
+	if ((retval = mips32_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK) {
+		LOG_DEBUG("Read of Config1 read Failed");
+		return retval;
+	}
+
+	/* Read Config3 registers */
+	retval = mips32_cp0_read(ejtag_info, &config3, 16, 3);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("reading config3 register failed");
 		return retval;
 	}
+
 	mips32->dsp_implemented = ((config3 & CFG3_DSPP) >>  10);
 	mips32->dsp_rev = ((config3 & CFG3_DSP_REV) >>  11);
 	mips32->mmips = ((config3 & CFG3_ISA_MODE) >>  14);
 
+	uint32_t cputype = DetermineCpuTypeFromPrid(prid, config, config1);
+
+	/* determine whether uC or uP core */
+	if ((cputype == MIPS_M14KE) || (cputype == MIPS_M14KEf))
+		mips32->cp0_mask = MIPS_CP0_mAPTIV_uC;
+	else
+		if ((cputype == MIPS_M14KEc) || (cputype == MIPS_M14KEcf))
+			mips32->cp0_mask = MIPS_CP0_mAPTIV_uP;
+	
 	LOG_USER("target halted in %s mode due to %s, pc: 0x%8.8" PRIx32 "",
 		mips_isa_strings[mips32->isa_mode],
 		debug_reason_name(target),
@@ -825,7 +859,7 @@ int mips32_checksum_memory(struct target *target, uint32_t address,
 	init_reg_param(&reg_params[1], "r5", 32, PARAM_OUT);
 	buf_set_u32(reg_params[1].value, 0, 32, count);
 
-	int timeout = 20000 * (1 + (count / (1024 * 1024)));
+	int timeout = 80000 * (1 + (count / (1024 * 1024)));
 
 	int retval = target_run_algorithm(target, 0, NULL, 2, reg_params,
 			crc_algorithm->address, crc_algorithm->address + (sizeof(mips_crc_code) - 4), timeout,
@@ -903,6 +937,7 @@ int mips32_blank_check_memory(struct target *target,
 uint32_t DetermineCpuTypeFromPrid(uint32_t prid, uint32_t config, uint32_t config1) {
 
 	uint32_t cpuType;
+
 	/* Determine CPU type from PRID. */
 	if (((prid >> 16) & 0xff) == 16)
 		/* Altera */
@@ -1179,6 +1214,30 @@ CLEANUP:
 	return (err != ERROR_OK ? err : err2);
 }
 
+#if 0
+uint32_t FwGetMtRegBlock(HDI_DEVICE_HANDLE handle, U32 count, FWREG *mtreg) {
+   HDI_RESULT err;
+   U32 buf[3];
+   U32 i;
+   DEVICE *device = (DEVICE *)handle;  
+   U32 a = device->fw->jnetDriverHandle+7;
+   if (M64) a += JNET_HANDLE_FLAGG;   // M64 indicator
+
+   // These registers are all 32-bit, and JNet driver for MIPS now
+   // requires size=4 for CP0 accesses unless target supports mfhc0
+   // instruction added in R5 (which also requires that CP0 register in 
+   // question is indeede 64-bits).  So... using size=4 accesses in
+   // interaction with probe driver, and then widening at this level
+   // to fit the FWREG data type
+   if ((err = ProbeVtiReadAndCheckTargetReset(handle, a, 0, count*sizeof(U32), count*sizeof(U32), (U8*)buf)) != HDI_SUCCESS) return err;
+   for (i = 0; i < count; i++) {
+      mtreg[i] = buf[i];
+   }
+   
+   return HDI_SUCCESS;
+}
+#endif
+
 static int mips32_verify_pointer(struct command_context *cmd_ctx,
 				 struct mips32_common *mips32)
 {
@@ -1211,22 +1270,28 @@ int mips32_cp0_command(struct command_invocation *cmd)
 
 		if (CMD_ARGC == 0) {
 			for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
-				retval = mips32_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
-				if (retval != ERROR_OK) {
-					command_print(CMD_CTX, "couldn't access reg %s", mips32_cp0_regs[i].name);
-					return ERROR_OK;
-				}
-
+				if (mips32_cp0_regs[i].core & mips32->cp0_mask) {
+					retval = mips32_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
+					if (retval != ERROR_OK) {
+						command_print(CMD_CTX, "couldn't access reg %s", mips32_cp0_regs[i].name);
+						return ERROR_OK;
+					}
+				} else /* Register name not valid for this core */
+					continue;
+				
 				command_print(CMD_CTX, "%*s: 0x%8.8x", 14, mips32_cp0_regs[i].name, value);
 			}
 		} else {
 			for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
 				/* find register name */
-				if (strcmp(mips32_cp0_regs[i].name, CMD_ARGV[0]) == 0) {
-					retval = mips32_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
-					command_print(CMD_CTX, "0x%8.8x", value);
-					return ERROR_OK;
-				}
+				if (mips32_cp0_regs[i].core & mips32->cp0_mask) {
+					if (strcmp(mips32_cp0_regs[i].name, CMD_ARGV[0]) == 0) {
+						retval = mips32_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
+						command_print(CMD_CTX, "0x%8.8x", value);
+						return ERROR_OK;
+					}
+				} else /* Register name not valid for this core */
+					continue;
 			}
 
 			LOG_ERROR("BUG: register '%s' not found", CMD_ARGV[0]);
@@ -1240,11 +1305,14 @@ int mips32_cp0_command(struct command_invocation *cmd)
 			if (isdigit(tmp) == false) {
 				for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
 					/* find register name */
-					if (strcmp(mips32_cp0_regs[i].name, CMD_ARGV[0]) == 0) {
-						COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], value);
-						retval = mips32_cp0_write(ejtag_info, value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
-						return ERROR_OK;
-					}
+					if (mips32_cp0_regs[i].core & mips32->cp0_mask) {
+						if (strcmp(mips32_cp0_regs[i].name, CMD_ARGV[0]) == 0) {
+							COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], value);
+							retval = mips32_cp0_write(ejtag_info, value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
+							return ERROR_OK;
+						}
+					} else /* Register name not valid for this core */
+						continue;
 				}
 
 				LOG_ERROR("BUG: register '%s' not found", CMD_ARGV[0]);
@@ -1316,6 +1384,7 @@ int mips32_scan_delay_command(struct command_invocation *cmd)
 
 COMMAND_HANDLER(mips32_handle_cp0_command)
 {
+
 	/* Call common code */
 	return mips32_cp0_command(cmd);
 }
@@ -1399,6 +1468,7 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 #endif
 
 	info.smase	= (config3 & 0x00000002) ? 1 : 0;		/* smartmips ase */
+	info.mtase  = (config3 & 0x00000004) ? 1 : 0;		/* multithreading */
 	info.m16ase = (config1 & 0x00000004) ? 1 : 0;		/* mips16(e) ase */
 	info.micromipsase = ((config3 >> 14) & 0x3) != 0;
 	info.mmuType = (config >> 7) & 7;					/* MMU Type Info */
@@ -1425,7 +1495,6 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 
 	/* MIPS® SIMD Architecture (MSA) */
 	info.msa = (config3 & 0x10000000) ? 1 : 0;
-
 	info.mvh = (config5 & (1<<5)) ? 1 : 0;		/* mvh */
 
 	/* MMU Supported */
@@ -1867,8 +1936,7 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 	/* Display Core Vendor */
 	LOG_USER (" vendor: %s", &text[0]);
 	LOG_USER ("  cpuid: %d", info.cpuid);
-	switch ((((config3 & 0x0000C000) >>  14)))
-	{
+	switch ((((config3 & 0x0000C000) >>  14))){
 		case 0:
 			strcpy (text, "MIPS32");
 			break;
@@ -1893,12 +1961,52 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 	LOG_USER ("Max Number of Instr Breakpoints: %d", mips32->num_inst_bpoints);
 	LOG_USER ("Max Number of  Data Breakpoints: %d", mips32->num_data_bpoints);
 
+//	if (info.mtase) {
+//	  typedef U64 FWREG;
+//      FWREG mtreg[2];
+//      if ((err = FwGetMtRegBlock(handle, 2, mtreg)) != HDI_SUCCESS) goto CLEANUP;
+//      device->fw->vpeid = (U32)(mtreg[1] & 0x0f);                // read and store curvpe field
+//      device->fw->ejtagtc = (U32)((mtreg[1] >> 21) & 0xff);      // store ejtag thread id
+//      device->fw->visibletc = (U32)((mtreg[1] >> 21) & 0xff);    // visble thread reset to ejtag thread
+//      device->fw->numtc = (U32)((mtreg[0] & 0xff) + 1);
+//      device->fw->numvpe = (U32)(((mtreg[0] >>10) & 0x0f) + 1);
+//      if ((mtreg[0] >> 28) & 1) {
+//         if (GetITCBaseAddr(handle, NULL, NULL, &device->fw->numitc) != HDI_SUCCESS) device->fw->numitc = 0;
+//      } else {
+//         device->fw->numitc = 0;   // Gating Storage not present
+//      }
+//      memset(device->fw->tcmode, 0, sizeof(device->fw->tcmode));   // all tcs default to run mode
+//      device->fw->sharedInstBkpts = ((ibs >> 15) & 1) ? TRUE : FALSE;
+//      device->fw->sharedDataBkpts = ((dbs >> 15) & 1) ? TRUE : FALSE;
+//   } else {
+//      device->fw->vpeid = 0;
+//      device->fw->numtc = 1;
+//      device->fw->numvpe = 1;
+//      device->fw->numitc = 0;
+//      device->fw->sharedInstBkpts = FALSE;
+//      device->fw->sharedDataBkpts = FALSE;
+//   }
+
+	if (info.mtase)
+		strcpy(text, "true");
+	else
+		strcpy(text, "false");
+
+	LOG_USER ("multithreading: %s", &text[0]);
+
 	if (info.dspase)
 		strcpy(text, "true");
 	else
 		strcpy(text, "false");
 
 	LOG_USER ("dsp: %s", &text[0]);
+
+	if (info.smase)
+		strcpy(text, "true");
+	else
+		strcpy(text, "false");
+
+	LOG_USER ("Smart Mips ASE: %s", &text[0]);
 
 	/* MIPS® SIMD Architecture (MSA) */
 	if (info.msa)
@@ -1939,7 +2047,7 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 	if (CMD_ARGC >= 3) 
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-//	LOG_INFO ("mips32->mmips = %x   mips32->dsp_implemented = %x, mips32->dsp_rev = %x",mips32->mmips, mips32->dsp_implemented, mips32->dsp_rev);
+	LOG_INFO ("mips32->mmips = %x   mips32->dsp_implemented = %x, mips32->dsp_rev = %x",mips32->mmips, mips32->dsp_implemented, mips32->dsp_rev);
 	/* Check if DSP access supported or not */
 	if (mips32->dsp_implemented == DSP_NOT_IMP) {
 
@@ -1948,10 +2056,10 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 		return ERROR_OK;
 	}
 
-	if (mips32->dsp_rev == DSP_REV1) {
-		command_print(CMD_CTX, "DSP Rev 1 not supported");
-		return ERROR_OK;
-	}
+//	if (mips32->dsp_rev == DSP_REV1) {
+//		command_print(CMD_CTX, "DSP Rev 1 not supported");
+//		return ERROR_OK;
+//	}
 
 	/* two or more argument, access a single register/select (write if third argument is given) */
 	if (CMD_ARGC < 2) {
@@ -1986,7 +2094,7 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 			int tmp = *CMD_ARGV[0];
 
 			if (isdigit(tmp) == false) {
-				for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
+				for (int i = 0; i < MIPS32NUMDSPREGS; i++) {
 					/* find register name */
 					if (strcmp(mips32_dsp_regs[i].name, CMD_ARGV[0]) == 0) {
 						COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], value);
@@ -2019,7 +2127,7 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	if (CMD_ARGC >= 2) {
+	if ((CMD_ARGC >= 2) || (CMD_ARGC == 0)){
 		LOG_DEBUG("ERROR_COMMAND_SYNTAX_ERROR");
 		return ERROR_COMMAND_SYNTAX_ERROR;
 	}
@@ -2031,26 +2139,24 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 				switch (invalidate_cmd[i].option) {
 					case ALL:
 						LOG_INFO("clearing %s cache", cache_msg[1]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[1].option);
-						if (retval != ERROR_OK)
-							return retval;
+						/* For this case - ignore any errors checks, just in case core has no instruction cache */
+						mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[1].option);
 
 						/* TODO: Add L2 code */
 						/* LOG_INFO("clearing %s cache", cache_msg[3]); */
-						/* retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, L2); */
+						/* retval = mips32_pracc_invalidate_cache(target, ejtag_info, L2); */
 						/* if (retval != ERROR_OK) */
 						/*	return retval; */
 
 						LOG_INFO("clearing %s cache", cache_msg[2]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[2].option);
-						if (retval != ERROR_OK)
-							return retval;
+						/* For this case - ignore any errors checks, just in case core has no data cache */
+						mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[2].option);
 
 						break;
 
 					case INST:
 						LOG_INFO("clearing %s cache", cache_msg[invalidate_cmd[i].option]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[i].option);
+						retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[i].option);
 						if (retval != ERROR_OK)
 							return retval;
 
@@ -2058,34 +2164,34 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 
 					case DATA:
 						LOG_INFO("clearing %s cache", cache_msg[invalidate_cmd[i].option]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[i].option);
+						retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[i].option);
 						if (retval != ERROR_OK)
 							return retval;
 
 						break;
 
 					case ALLNOWB:
-						LOG_INFO("clearing %s cache - no writeback", cache_msg[invalidate_cmd[1].option]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[i].option);
+						LOG_INFO("invalidating %s cache", cache_msg[invalidate_cmd[1].option]);
+						retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[1].option);
 						if (retval != ERROR_OK)
 							return retval;
 
 						/* TODO: Add L2 code */
-						/* LOG_INFO("clearing %s cache no writeback", cache_msg[3]); */
-						/* retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, L2); */
+						/* LOG_INFO("invalidating %s cache no writeback", cache_msg[3]); */
+						/* retval = mips32_pracc_invalidate_cache(target, ejtag_info, L2); */
 						/* if (retval != ERROR_OK) */
 						/*	return retval; */
 
-						LOG_INFO("clearing %s cache - no writeback", cache_msg[2]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[2].option);
+						LOG_INFO("invalidating %s cache - no writeback", cache_msg[2]);
+						retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[2].option);
 						if (retval != ERROR_OK)
 							return retval;
 
 						break;
 
 					case DATANOWB:
-						LOG_INFO("clearing %s cache - no writeback", cache_msg[2]);
-						retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[i].option);
+						LOG_INFO("invalidating %s cache - no writeback", cache_msg[2]);
+						retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[i].option);
 						if (retval != ERROR_OK)
 							return retval;
 						break;
@@ -2108,24 +2214,25 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 			}
 
 		}
-	} else {
-		/* default is All */
-		LOG_INFO("clearing %s cache", cache_msg[1]);
-		retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[1].option);
-		if (retval != ERROR_OK)
-			return retval;
+	}
+//else {
+//		/* default is All */
+//		LOG_INFO("invalidating %s cache", cache_msg[1]);
+//		retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[1].option);
+//		if (retval != ERROR_OK)
+//			return retval;
 
 		/* TODO: Add L2 code */
-		/* LOG_INFO("clearing %s cache", cache_msg[3]); */
-		/* retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, L2); */
+		/* LOG_INFO("invalidating %s cache", cache_msg[3]); */
+		/* retval = mips32_pracc_invalidate_cache(target, ejtag_info, L2); */
 		/* if (retval != ERROR_OK) */
 		/*	return retval; */
 
-		LOG_INFO("clearing %s cache", cache_msg[2]);
-		retval = mips32_pracc_invalidate_cache(target, ejtag_info, 0, 0, 0, invalidate_cmd[2].option);
-		if (retval != ERROR_OK)
-			return retval;
-	}
+//		LOG_INFO("invalidating %s cache", cache_msg[2]);
+//		retval = mips32_pracc_invalidate_cache(target, ejtag_info, invalidate_cmd[2].option);
+//		if (retval != ERROR_OK)
+//			return retval;
+//	}
 
 	return ERROR_OK;
 }
@@ -2206,7 +2313,7 @@ static const struct command_registration mips32_exec_command_handlers[] = {
 		.handler = mips32_handle_invalidate_cache_command,
 		.mode = COMMAND_EXEC,
 		.help = "Invalidate either or both the instruction and data caches.",
-		.usage = "[all|inst|data|allnowb|datanowb]",
+		.usage = "all|inst|data|allnowb|datanowb",
 	},
 	{
 		.name = "scan_delay",
