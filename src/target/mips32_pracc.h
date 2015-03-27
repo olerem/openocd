@@ -66,7 +66,9 @@ int mips32_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info, struct working_are
 		int write_t, uint32_t addr, int count, uint32_t *buf);
 
 int mips32_pracc_read_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
+int mips32_pracc_read_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 int mips32_pracc_write_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
+int mips32_pracc_write_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 
 int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ctx, uint32_t *param_out);
 
@@ -83,7 +85,7 @@ int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ct
  *
  * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
  */
-int mips32_cp0_read(struct mips_ejtag *ejtag_info,
+int mips32_pracc_cp0_read(struct mips_ejtag *ejtag_info,
 		uint32_t *val, uint32_t cp0_reg, uint32_t cp0_sel);
 
 /**
@@ -99,7 +101,7 @@ int mips32_cp0_read(struct mips_ejtag *ejtag_info,
  *
  * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
  */
-int mips32_cp0_write(struct mips_ejtag *ejtag_info,
+int mips32_pracc_cp0_write(struct mips_ejtag *ejtag_info,
 					 uint32_t val, uint32_t cp0_reg, uint32_t cp0_sel);
 
 /**

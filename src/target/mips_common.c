@@ -262,11 +262,15 @@ int mips_common_poll(struct target *target)
 			 */
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_NORMALBOOT);
 			target->state = TARGET_HALTED;
+
 			retval = mips_common_debug_entry(target, 1);
 			if (retval != ERROR_OK) {
 				LOG_DEBUG("mips_debug_entry failed");
 				return retval;
 			}
+
+			/* Get cpu config info */
+			mips32_read_cpu_config_info (target);
 
 			if (target->smp && ((prev_target_state == TARGET_RUNNING)
 								|| (prev_target_state == TARGET_RESET))) {
@@ -384,7 +388,6 @@ int mips_common_assert_reset(struct target *target)
 
 		/* use microchip specific MTAP reset */
 		mips_ejtag_set_instr(ejtag_info, MTAP_SW_MTAP);
-//		mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
 		mips_ejtag_set_instr(ejtag_info, MTAP_COMMAND);
 
 		mips_ejtag_drscan_8_out(ejtag_info, MCHP_ASERT_RST);

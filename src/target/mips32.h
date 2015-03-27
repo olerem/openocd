@@ -72,6 +72,10 @@ enum {
 	MIPS32NUMCOREREGS
 };
 
+#define CACHE_REG_STATUS 32
+#define CACHE_REG_CAUSE 36
+#define CACHE_REG_PC 37
+
 #define MIPS32NUMDSPREGS 9
 
 #define MIPS32NUMCP0REGS 104
@@ -205,6 +209,11 @@ enum micro_mips_enabled {
 	MICRO_MIPS32_16_ONRESET_MIPS16 = 3,
 };
 
+enum fp {
+	FP_NOT_IMP = 0,
+	FP_IMP = 1,
+};
+
 enum dsp {
 	DSP_NOT_IMP = 0,
 	DSP_IMP = 1,
@@ -231,6 +240,7 @@ struct mips32_common {
 	enum micro_mips_enabled mmips;
 	enum dsp dsp_implemented;
 	enum dsp_rev dsp_rev;
+	enum fp fp_implemented;
 
 	/* Mask used to determine is CP0 name valid for core */
 	/* note hard coded for M4K to support backward compatibility */
@@ -421,6 +431,12 @@ struct mips32_algorithm {
 #define CFG3_SM			0x00000002		/* SmartMIPS ASE */
 #define CFG3_TL			0x00000001		/* Trace Logic */
 
+/* Enable CoProcessor - CP0 12, 0 (status) */
+#define STATUS_CU3_MASK 0x80000000
+#define STATUS_CU2_MASK 0x40000000
+#define STATUS_CU1_MASK 0x20000000
+#define STATUS_CU0_MASK 0x10000000
+
 /*
  * Cache operations
  */
@@ -553,6 +569,7 @@ struct mips32_algorithm {
 #define MIPS32_OP_AND	0x24
 #define MIPS32_OP_CACHE	0x2F
 #define MIPS32_OP_COP0	0x10
+#define MIPS32_OP_COP1	0x11
 #define MIPS32_OP_EXT	0x1F
 #define MIPS32_OP_J     0x02
 #define MIPS32_OP_JR	0x08
@@ -585,7 +602,11 @@ struct mips32_algorithm {
 #define MIPS32_OP_SPECIAL3	0x1F
 
 #define MIPS32_COP0_MF	0x00
+#define MIPS32_COP1_MF	0x00
+#define MIPS32_COP1_CF	0x02
 #define MIPS32_COP0_MT	0x04
+#define MIPS32_COP1_MT	0x04
+#define MIPS32_COP1_CT	0x06
 
 #define MIPS32_R_INST(opcode, rs, rt, rd, shamt, funct) \
 	(((opcode) << 26) | ((rs) << 21) | ((rt) << 16) | ((rd) << 11) | ((shamt) << 6) | (funct))
@@ -609,8 +630,12 @@ struct mips32_algorithm {
 #define MIPS32_J(tar)					MIPS32_J_INST(MIPS32_OP_J, tar)
 #define MIPS32_JR(reg)					MIPS32_R_INST(0, reg, 0, 0, 0, MIPS32_OP_JR)
 #define MIPS32_MFC0(gpr, cpr, sel)		MIPS32_R_INST(MIPS32_OP_COP0, MIPS32_COP0_MF, gpr, cpr, 0, sel)
+#define MIPS32_MFC1(rt, fs)				MIPS32_R_INST(MIPS32_OP_COP1, MIPS32_COP1_MF, rt, fs, 0, 0)
+#define MIPS32_CFC1(rt, fs)				MIPS32_R_INST(MIPS32_OP_COP1, MIPS32_COP1_CF, rt, fs, 0, 0)
 #define MIPS32_MOVE(dst, src)			MIPS32_R_INST(17, 16, 0, src, dst, 6)
 #define MIPS32_MTC0(gpr, cpr, sel)		MIPS32_R_INST(MIPS32_OP_COP0, MIPS32_COP0_MT, gpr, cpr, 0, sel)
+#define MIPS32_MTC1(rt, fs)				MIPS32_R_INST(MIPS32_OP_COP1, MIPS32_COP1_MT, rt, fs, 0, 0)
+#define MIPS32_CTC1(rt, fs)				MIPS32_R_INST(MIPS32_OP_COP1, MIPS32_COP1_CT, rt, fs, 0, 0)
 #define MIPS32_LBU(reg, off, base)		MIPS32_I_INST(MIPS32_OP_LBU, base, reg, off)
 #define MIPS32_LHU(reg, off, base)		MIPS32_I_INST(MIPS32_OP_LHU, base, reg, off)
 #define MIPS32_LUI(reg, val)			MIPS32_I_INST(MIPS32_OP_LUI, 0, reg, val)
@@ -871,6 +896,7 @@ typedef struct {
 extern const struct command_registration mips32_command_handlers[];
 
 int mips32_arch_state(struct target *target);
+int mips32_read_cpu_config_info (struct target *target);
 
 int mips32_init_arch_info(struct target *target,
 		struct mips32_common *mips32, struct jtag_tap *tap);

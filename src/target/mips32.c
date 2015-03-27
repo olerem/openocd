@@ -192,17 +192,6 @@ static const struct {
 
 #define MIPS32_NUM_REGS ARRAY_SIZE(mips32_regs)
 
-static uint8_t mips32_gdb_dummy_fp_value[] = {0, 0, 0, 0};
-
-static struct reg mips32_gdb_dummy_fp_reg = {
-	.name = "GDB dummy floating-point register",
-	.value = mips32_gdb_dummy_fp_value,
-	.dirty = 0,
-	.valid = 1,
-	.size = 32,
-	.arch_info = NULL,
-};
-
 /* WAYS MAPPING */
 static const int wayTable[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};	   /* field->ways mapping */
 static const int setTableISDS[] = {64,128,256,512,1024,2048,4096,32,		  /* field->sets mapping */
@@ -225,7 +214,6 @@ static int mips32_get_core_reg(struct reg *reg)
 		return ERROR_TARGET_NOT_HALTED;
 
 	retval = mips32_target->read_core_reg(target, mips32_reg->num);
-
 	return retval;
 }
 
@@ -233,6 +221,15 @@ static int mips32_set_core_reg(struct reg *reg, uint8_t *buf)
 {
 	struct mips32_core_reg *mips32_reg = reg->arch_info;
 	struct target *target = mips32_reg->target;
+
+	/* get pointers to arch-specific information */
+	struct mips32_common *mips32 = target_to_mips32(target);
+
+	if ((mips32->fp_implemented != FP_IMP)&& (mips32_reg->num > MIPS32_PC)){
+		LOG_USER ("No Upate - No FPU Available");
+		return ERROR_OK;
+	}
+
 	uint32_t value = buf_get_u32(buf, 0, 32);
 
 	if (target->state != TARGET_HALTED)
@@ -273,11 +270,15 @@ static int mips32_write_core_reg(struct target *target, unsigned int num)
 	if (num >= MIPS32_NUM_REGS)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-	reg_value = buf_get_u32(mips32->core_cache->reg_list[num].value, 0, 32);
-	mips32->core_regs[num] = reg_value;
-	LOG_DEBUG("write core reg %i value 0x%" PRIx32 "", num , reg_value);
-	mips32->core_cache->reg_list[num].valid = 1;
-	mips32->core_cache->reg_list[num].dirty = 0;
+	if ((mips32->fp_implemented != FP_IMP)&& (num > MIPS32_PC)){
+		LOG_USER ("No FPU Available");
+	} else {
+		reg_value = buf_get_u32(mips32->core_cache->reg_list[num].value, 0, 32);
+		mips32->core_regs[num] = reg_value;
+		LOG_DEBUG("write core reg %i value 0x%" PRIx32 "", num , reg_value);
+		mips32->core_cache->reg_list[num].valid = 1;
+		mips32->core_cache->reg_list[num].dirty = 0;
+	}
 
 	return ERROR_OK;
 }
@@ -296,27 +297,26 @@ int mips32_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
 	for (i = 0; i < MIPS32_NUM_REGS; i++)
 		(*reg_list)[i] = &mips32->core_cache->reg_list[i];
 
-	/* add dummy floating points regs */
-//	for (i = MIPS32NUMCOREREGS; i < (MIPS32NUMCOREREGS + MIPS32NUMFPREGS); i++)
-//		(*reg_list)[i] = &mips32_gdb_dummy_fp_reg;
-
 	return ERROR_OK;
 }
 
 int mips32_save_context(struct target *target)
 {
 	unsigned int i;
+	int retval;
+	uint32_t config1;
 
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
 
 	/* read core registers */
-	int retval = mips32_pracc_read_regs(ejtag_info, mips32->core_regs);
+	retval = mips32_pracc_read_regs(ejtag_info, mips32->core_regs);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("mips32_pracc_read_regs failed");
 		return retval;
 	}
+
 	for (i = 0; i < MIPS32_NUM_REGS; i++) {
 		if (!mips32->core_cache->reg_list[i].valid) {
 			retval = mips32->read_core_reg(target, i);
@@ -327,12 +327,125 @@ int mips32_save_context(struct target *target)
 		}
 	}
 
+	/* Read Config1 registers */
+	retval = mips32_pracc_cp0_read(ejtag_info, &config1, 16, 1);
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("reading config3 register failed");
+		return retval;
+	}
+
+	/* Retrive if Float Point CoProcessor Implemented */
+	mips32->fp_implemented = (config1 & CFG1_FP);
+
+	/* FP Coprocessor available read FP registers */
+	if (mips32->fp_implemented == FP_IMP) {
+		uint32_t config3;
+		uint32_t mvpconf1;
+		uint32_t status;
+		uint32_t tmp_status;
+
+		/* Read Config3 registers */
+		retval = mips32_pracc_cp0_read(ejtag_info, &config3, 16, 3);
+		if (retval != ERROR_OK) {
+			LOG_DEBUG("reading config3 register failed");
+			return retval;
+		}
+
+		/* Read mvpconf1 registers */
+		retval = mips32_pracc_cp0_read(ejtag_info, &mvpconf1, 0, 3);
+		if (retval != ERROR_OK) {
+			LOG_DEBUG("reading config3 register failed");
+			return retval;
+		}
+
+		/* check if VPE has access to FPU */
+		if ((config1 & 0x00000001) ) {
+
+			/* Check if multi-thread core with single thread FPU */
+			if ((((config3 & 0x00000004) >> 2) == 1) && ((mvpconf1 & 0x00000001) == 1)) {
+
+				/* Read Status register, save it and modify to enable CP0 */
+				retval = mips32_pracc_cp0_read(ejtag_info, &status, 12, 0);
+				if (retval != ERROR_OK) {
+					LOG_DEBUG("reading status register failed");
+					return retval;
+				}
+
+				/* Check if Access to COP1 enabled */
+				if (((status & 0x20000000) >> 29) == 0) {
+					if ((retval = mips32_pracc_cp0_write(ejtag_info, (status | STATUS_CU1_MASK), 12, 0)) != ERROR_OK) {
+						LOG_DEBUG("writing status register failed");
+						return retval;
+					}
+
+					/* Verify CP1 Enabled */
+					retval = mips32_pracc_cp0_read(ejtag_info, &tmp_status, 12, 0);
+					if (retval != ERROR_OK) {
+						LOG_DEBUG("writing status register failed");
+						return retval;
+					}
+
+					if (((tmp_status & 0x20000000) >> 29)!= 1) {
+						LOG_USER ("1 Access to FPU not available - tmp_status: 0x%x, status: 0x%x", tmp_status, status);
+						return retval;
+					}
+				}
+
+				/* read core registers */
+				retval = mips32_pracc_read_fpu_regs(ejtag_info, (uint32_t *)(&mips32->core_regs[38]));
+				if (retval != ERROR_OK)
+					LOG_INFO("mips32->read_core_reg failed");
+
+				/* restore previous setting */
+				if ((mips32_pracc_cp0_write(ejtag_info, status, 12, 0)) != ERROR_OK)
+					LOG_DEBUG("writing status register failed");
+			}
+		} else {
+			/* Read Status register, save it and modify to enable CP0 */
+			retval = mips32_pracc_cp0_read(ejtag_info, &status, 12, 0);
+			if (retval != ERROR_OK) {
+				LOG_DEBUG("reading status register failed");
+				return retval;
+			}
+
+			/* Check if Access to COP1 enabled */
+			if (((status & 0x20000000) >> 29) == 0) {
+				if ((retval = mips32_pracc_cp0_write(ejtag_info, (status | STATUS_CU1_MASK), 12, 0)) != ERROR_OK) {
+					LOG_DEBUG("writing status register failed");
+						return retval;
+				}
+			}
+
+			/* read core registers */
+			retval = mips32_pracc_read_fpu_regs(ejtag_info, (uint32_t *)(&mips32->core_regs[38]));
+			if (retval != ERROR_OK)
+				LOG_INFO("mips32->read_fpu_reg failed: status: 0x%x, tmp_status: 0x%x", status, tmp_status);
+			
+			/* restore previous setting */
+			if ((mips32_pracc_cp0_write(ejtag_info, status, 12, 0)) != ERROR_OK)
+				LOG_DEBUG("writing status register failed");
+		}
+
+		for (i = 38; i < MIPS32_NUM_REGS; i++) {
+			if (mips32->core_cache->reg_list[i].valid) {
+				retval = mips32->read_core_reg(target, i);
+				if (retval != ERROR_OK) {
+					LOG_DEBUG("mips32->read_core_reg failed");
+					return retval;
+				}
+			}
+		}
+
+	}
+
 	return ERROR_OK;
 }
 
 int mips32_restore_context(struct target *target)
 {
 	unsigned int i;
+	int retval;
+	uint32_t config1;
 
 	/* get pointers to arch-specific information */
 	struct mips32_common *mips32 = target_to_mips32(target);
@@ -343,6 +456,92 @@ int mips32_restore_context(struct target *target)
 			mips32->write_core_reg(target, i);
 	}
 
+	/* If FPU then Update registers */
+	/* FP Coprocessor available read FP registers */
+	if (mips32->fp_implemented == FP_IMP) {
+		uint32_t config3;
+		uint32_t mvpconf1;
+		uint32_t status;
+		uint32_t tmp_status;
+
+		/* Read Config3 registers */
+		retval = mips32_pracc_cp0_read(ejtag_info, &config3, 16, 3);
+		if (retval != ERROR_OK) {
+			LOG_DEBUG("reading config3 register failed");
+			return retval;
+		}
+
+		/* Read mvpconf1 registers */
+		retval = mips32_pracc_cp0_read(ejtag_info, &mvpconf1, 0, 3);
+		if (retval != ERROR_OK) {
+			LOG_DEBUG("reading config3 register failed");
+			return retval;
+		}
+
+		/* check if FPU configured and Multi-thread core*/
+		if ((config1 & 0x00000001) == 1) {
+
+			/* Check if multi-thread core with single thread FPU */
+			if ((((config3 & 0x00000004) >> 2) == 1) && ((mvpconf1 & 0x00000001) == 1)) {
+
+				/* Read Status register, save it and modify to enable CP0 */
+				retval = mips32_pracc_cp0_read(ejtag_info, &status, 12, 0);
+				if (retval != ERROR_OK) {
+					LOG_DEBUG("reading status register failed");
+					return retval;
+				}
+
+				if ((retval = mips32_pracc_cp0_write(ejtag_info, (status | STATUS_CU1_MASK), 12, 0)) != ERROR_OK) {
+					LOG_DEBUG("writing status register failed");
+					return retval;
+				}
+
+				/* Verify CP1 Enabled */
+				retval = mips32_pracc_cp0_read(ejtag_info, &tmp_status, 12, 0);
+				if (retval != ERROR_OK) {
+					LOG_DEBUG("writing status register failed");
+					return retval;
+				}
+
+				if (((tmp_status & 0x20000000) >> 29)!= 1) {
+					LOG_USER ("1 Access to FPU not available - tmp_status: 0x%x, status: 0x%x", tmp_status, status);
+					return retval;
+				}
+
+				/* read core registers */
+				retval = mips32_pracc_write_fpu_regs(ejtag_info, (uint32_t *)(&mips32->core_regs[38]));
+				if (retval != ERROR_OK)
+					LOG_INFO("mips32->read_core_reg failed");
+
+				/* restore previous setting */
+				if ((mips32_pracc_cp0_write(ejtag_info, status, 12, 0)) != ERROR_OK)
+					LOG_DEBUG("writing status register failed");
+			} else {
+				/* Read Status register, save it and modify to enable CP0 */
+				retval = mips32_pracc_cp0_read(ejtag_info, &status, 12, 0);
+				if (retval != ERROR_OK) {
+					LOG_DEBUG("reading status register failed");
+					return retval;
+				}
+
+				if ((retval = mips32_pracc_cp0_write(ejtag_info, (status | STATUS_CU1_MASK), 12, 0)) != ERROR_OK) {
+					LOG_DEBUG("writing status register failed");
+					return retval;
+				}
+
+
+				/* read core registers */
+				retval = mips32_pracc_write_fpu_regs(ejtag_info, (uint32_t *)(&mips32->core_regs[38]));
+				if (retval != ERROR_OK)
+					LOG_INFO("mips32->read_core_reg failed");
+
+				/* restore previous setting */
+				if ((mips32_pracc_cp0_write(ejtag_info, status, 12, 0)) != ERROR_OK)
+					LOG_DEBUG("writing status register failed");
+			}
+		}
+	}
+
 	/* write core regs */
 	mips32_pracc_write_regs(ejtag_info, mips32->core_regs);
 
@@ -351,43 +550,63 @@ int mips32_restore_context(struct target *target)
 
 int mips32_arch_state(struct target *target)
 {
-	LOG_DEBUG("mips32_arch_state");
+	struct mips32_common *mips32 = target_to_mips32(target);
+
+	/* Read interesting Configuration Registers */
+	mips32_read_cpu_config_info (target);
+
+	LOG_USER("target halted in %s mode due to %s, pc: 0x%8.8" PRIx32 "",
+		mips_isa_strings[mips32->isa_mode],
+		debug_reason_name(target),
+		buf_get_u32(mips32->core_cache->reg_list[MIPS32_PC].value, 0, 32));
+
+	return ERROR_OK;
+}
+
+int mips32_read_cpu_config_info (struct target *target)
+{
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
-	int retval;
 
+	int retval;
 	uint32_t	prid; /* cp0 PRID - 15, 0 */
 	uint32_t config;
 	uint32_t config3;
 	uint32_t config1;
 
 	/* Read PRID registers */
-	if ((retval = mips32_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK) {
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK) {
 		LOG_DEBUG("READ of PRID Failed");
 		return retval;
 	}
 
 	/* Read Config registers */
-	if ((retval = mips32_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK) {
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK) {
 		LOG_DEBUG("Read of Config reg Failed");
 		return retval;
 	}
 
 	/* Read Config1 registers */
-	if ((retval = mips32_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK) {
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK) {
 		LOG_DEBUG("Read of Config1 read Failed");
 		return retval;
 	}
 
 	/* Read Config3 registers */
-	retval = mips32_cp0_read(ejtag_info, &config3, 16, 3);
+	retval = mips32_pracc_cp0_read(ejtag_info, &config3, 16, 3);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("reading config3 register failed");
 		return retval;
 	}
 
+	/* Retrive if Float Point CoProcessor Implemented */
+	mips32->fp_implemented = (config1 & CFG1_FP);
+
+	/* Retrieve DSP info */
 	mips32->dsp_implemented = ((config3 & CFG3_DSPP) >>  10);
 	mips32->dsp_rev = ((config3 & CFG3_DSP_REV) >>  11);
+
+	/* Retrieve ISA Mode */
 	mips32->mmips = ((config3 & CFG3_ISA_MODE) >>  14);
 
 	uint32_t cputype = DetermineCpuTypeFromPrid(prid, config, config1);
@@ -398,11 +617,6 @@ int mips32_arch_state(struct target *target)
 	else
 		if ((cputype == MIPS_M14KEc) || (cputype == MIPS_M14KEcf))
 			mips32->cp0_mask = MIPS_CP0_mAPTIV_uP;
-	
-	LOG_USER("target halted in %s mode due to %s, pc: 0x%8.8" PRIx32 "",
-		mips_isa_strings[mips32->isa_mode],
-		debug_reason_name(target),
-		buf_get_u32(mips32->core_cache->reg_list[MIPS32_PC].value, 0, 32));
 
 	return ERROR_OK;
 }
@@ -425,8 +639,6 @@ struct reg_cache *mips32_build_reg_cache(struct target *target)
 	struct reg_feature *feature;
 	int i;
 
-	register_init_dummy(&mips32_gdb_dummy_fp_reg);
-
 	/* Build the process context cache */
 	cache->name = "mips32 registers";
 	cache->next = NULL;
@@ -443,22 +655,16 @@ struct reg_cache *mips32_build_reg_cache(struct target *target)
 		reg_list[i].name = mips32_regs[i].name;
 		reg_list[i].size = 32;
 
-		if (mips32_regs[i].flag == MIPS32_GDB_DUMMY_FP_REG) {
-			reg_list[i].value = mips32_gdb_dummy_fp_value;
-			reg_list[i].valid = 1;
-			reg_list[i].arch_info = NULL;
-			register_init_dummy(&reg_list[i]);
-		} else {
 		reg_list[i].value = calloc(1, 4);
 		reg_list[i].valid = 0;
 		reg_list[i].type = &mips32_reg_type;
 		reg_list[i].arch_info = &arch_info[i];
-			reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
-			if (reg_list[i].reg_data_type)
-				reg_list[i].reg_data_type->type = mips32_regs[i].type;
-			else
-				LOG_ERROR("unable to allocate reg type list");
-		}
+		reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
+		if (reg_list[i].reg_data_type)
+			reg_list[i].reg_data_type->type = mips32_regs[i].type;
+		else
+			LOG_ERROR("unable to allocate reg type list");
+
 		reg_list[i].dirty = 0;
 		reg_list[i].group = mips32_regs[i].group;
 		reg_list[i].number = i;
@@ -1178,12 +1384,12 @@ uint32_t DetermineGuestIdWidth(struct mips_ejtag *ejtag_info, uint32_t *width) {
 	uint32_t guestCtl1 = 0;
 	uint32_t tempReg = 0;
 
-	if ((err = mips32_cp0_read(ejtag_info, &guestCtl0, 12, 6)) != ERROR_OK) {
+	if ((err = mips32_pracc_cp0_read(ejtag_info, &guestCtl0, 12, 6)) != ERROR_OK) {
 		goto CLEANUP;
 	}
 	
 	if (((guestCtl0 >> 22) & 0x1) != 0) {
-		if ((err = mips32_cp0_read(ejtag_info, &guestCtl1, 10, 4)) != ERROR_OK) {
+		if ((err = mips32_pracc_cp0_read(ejtag_info, &guestCtl1, 10, 4)) != ERROR_OK) {
 			goto CLEANUP;
 		}
 
@@ -1193,10 +1399,10 @@ uint32_t DetermineGuestIdWidth(struct mips_ejtag *ejtag_info, uint32_t *width) {
 			tempReg = (((tempReg) & ~0xFF) | 0xFF);
 		} while (0);
 
-		if ((err = mips32_cp0_write(ejtag_info, tempReg, 10, 4)) != ERROR_OK) {
+		if ((err = mips32_pracc_cp0_write(ejtag_info, tempReg, 10, 4)) != ERROR_OK) {
 			goto CLEANUP;
 		}
-		if ((err = mips32_cp0_read(ejtag_info, &tempReg, 10, 4)) != ERROR_OK) {
+		if ((err = mips32_pracc_cp0_read(ejtag_info, &tempReg, 10, 4)) != ERROR_OK) {
 			goto CLEANUP;
 		}
 		while (count < 8 && (tempReg & 0x1) != 0) {
@@ -1208,35 +1414,11 @@ uint32_t DetermineGuestIdWidth(struct mips_ejtag *ejtag_info, uint32_t *width) {
 CLEANUP:
 	if (guestCtl1Clobbered) {
 		// restore
-		err2 = mips32_cp0_write(ejtag_info, guestCtl1, 10, 4);
+		err2 = mips32_pracc_cp0_write(ejtag_info, guestCtl1, 10, 4);
 	}
 	*width = count;
 	return (err != ERROR_OK ? err : err2);
 }
-
-#if 0
-uint32_t FwGetMtRegBlock(HDI_DEVICE_HANDLE handle, U32 count, FWREG *mtreg) {
-   HDI_RESULT err;
-   U32 buf[3];
-   U32 i;
-   DEVICE *device = (DEVICE *)handle;  
-   U32 a = device->fw->jnetDriverHandle+7;
-   if (M64) a += JNET_HANDLE_FLAGG;   // M64 indicator
-
-   // These registers are all 32-bit, and JNet driver for MIPS now
-   // requires size=4 for CP0 accesses unless target supports mfhc0
-   // instruction added in R5 (which also requires that CP0 register in 
-   // question is indeede 64-bits).  So... using size=4 accesses in
-   // interaction with probe driver, and then widening at this level
-   // to fit the FWREG data type
-   if ((err = ProbeVtiReadAndCheckTargetReset(handle, a, 0, count*sizeof(U32), count*sizeof(U32), (U8*)buf)) != HDI_SUCCESS) return err;
-   for (i = 0; i < count; i++) {
-      mtreg[i] = buf[i];
-   }
-   
-   return HDI_SUCCESS;
-}
-#endif
 
 static int mips32_verify_pointer(struct command_context *cmd_ctx,
 				 struct mips32_common *mips32)
@@ -1251,6 +1433,8 @@ static int mips32_verify_pointer(struct command_context *cmd_ctx,
 int mips32_cp0_command(struct command_invocation *cmd)
 {
 	int retval;
+	uint32_t reg_value;
+
 	struct target *target = get_current_target(CMD_CTX);
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
@@ -1271,7 +1455,7 @@ int mips32_cp0_command(struct command_invocation *cmd)
 		if (CMD_ARGC == 0) {
 			for (int i = 0; i < MIPS32NUMCP0REGS; i++) {
 				if (mips32_cp0_regs[i].core & mips32->cp0_mask) {
-					retval = mips32_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
+					retval = mips32_pracc_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
 					if (retval != ERROR_OK) {
 						command_print(CMD_CTX, "couldn't access reg %s", mips32_cp0_regs[i].name);
 						return ERROR_OK;
@@ -1286,7 +1470,7 @@ int mips32_cp0_command(struct command_invocation *cmd)
 				/* find register name */
 				if (mips32_cp0_regs[i].core & mips32->cp0_mask) {
 					if (strcmp(mips32_cp0_regs[i].name, CMD_ARGV[0]) == 0) {
-						retval = mips32_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
+						retval = mips32_pracc_cp0_read(ejtag_info, &value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
 						command_print(CMD_CTX, "0x%8.8x", value);
 						return ERROR_OK;
 					}
@@ -1308,7 +1492,25 @@ int mips32_cp0_command(struct command_invocation *cmd)
 					if (mips32_cp0_regs[i].core & mips32->cp0_mask) {
 						if (strcmp(mips32_cp0_regs[i].name, CMD_ARGV[0]) == 0) {
 							COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], value);
-							retval = mips32_cp0_write(ejtag_info, value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
+
+							/* Check if user is writing to Status register */
+							if ((mips32_cp0_regs[i].reg == C0_STATUS) && (mips32_cp0_regs[i].sel == 0)) {
+								mips32->core_regs[CACHE_REG_STATUS] = value;
+								buf_set_u32(mips32->core_cache->reg_list[CACHE_REG_STATUS].value, 0, 32, value);
+								mips32->core_cache->reg_list[CACHE_REG_STATUS].dirty = 1;
+							} else /* Cause register ?? Update register cache with new value */
+								if ((mips32_cp0_regs[i].reg == C0_CAUSE) && (mips32_cp0_regs[i].sel == 0)) {
+									mips32->core_regs[CACHE_REG_CAUSE] = value;
+									buf_set_u32(mips32->core_cache->reg_list[CACHE_REG_CAUSE].value, 0, 32, value);
+									mips32->core_cache->reg_list[CACHE_REG_CAUSE].dirty = 1;
+								} else /* DEPC ? Update cached PC */
+									if ((mips32_cp0_regs[i].reg == C0_DEPC) && (mips32_cp0_regs[i].sel == 0)) {
+										mips32->core_regs[CACHE_REG_PC] = value;
+										buf_set_u32(mips32->core_cache->reg_list[CACHE_REG_PC].value, 0, 32, value);
+										mips32->core_cache->reg_list[CACHE_REG_PC].dirty = 1;
+									}
+
+							retval = mips32_pracc_cp0_write(ejtag_info, value, mips32_cp0_regs[i].reg, mips32_cp0_regs[i].sel);
 							return ERROR_OK;
 						}
 					} else /* Register name not valid for this core */
@@ -1322,7 +1524,7 @@ int mips32_cp0_command(struct command_invocation *cmd)
 				COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], cp0_reg);
 				COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], cp0_sel);
 
-				retval = mips32_cp0_read(ejtag_info, &value, cp0_reg, cp0_sel);
+				retval = mips32_pracc_cp0_read(ejtag_info, &value, cp0_reg, cp0_sel);
 				if (retval != ERROR_OK) {
 					command_print(CMD_CTX,
 								  "couldn't access reg %" PRIi32,
@@ -1340,7 +1542,22 @@ int mips32_cp0_command(struct command_invocation *cmd)
 			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], cp0_reg);
 			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], cp0_sel);
 			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[2], value);
-			retval = mips32_cp0_write(ejtag_info, value, cp0_reg, cp0_sel);
+
+			/* Check if user is writing to Status register */
+			if ((cp0_reg == C0_STATUS) && (cp0_sel == 0)) {
+				mips32->core_regs[CACHE_REG_STATUS] = value;
+				mips32->core_cache->reg_list[CACHE_REG_STATUS].dirty = 1;
+			} else /* Cause register ?? Update register cache with new value */
+				if ((cp0_reg == C0_CAUSE) && (cp0_sel == 0)) {
+					mips32->core_regs[CACHE_REG_CAUSE] = value;
+					mips32->core_cache->reg_list[CACHE_REG_CAUSE].dirty = 1;
+				} else /* DEPC ? Update cached PC */
+					if ((cp0_reg == C0_DEPC) && (cp0_sel == 0)) {
+						mips32->core_regs[CACHE_REG_PC] = value;
+						mips32->core_cache->reg_list[CACHE_REG_PC].dirty = 1;
+					}
+
+			retval = mips32_pracc_cp0_write(ejtag_info, value, cp0_reg, cp0_sel);
 			if (retval != ERROR_OK) {
 				command_print(CMD_CTX,
 						"couldn't access cp0 reg %" PRIi32 ", select %" PRIi32,
@@ -1430,43 +1647,33 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
 	/* Read PRID and config registers */
-	if ((retval = mips32_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK)
 		return retval;
 
 	/* Read Config, Config(1,2,3,5 and 7) registers */
-	if ((retval = mips32_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK)
 		return retval;
 
-	if ((retval = mips32_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK)
 		return retval;
 
-	if ((retval = mips32_cp0_read(ejtag_info, &config2, 16, 2))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config2, 16, 2))!= ERROR_OK)
 		return retval;
 
-	if ((retval = mips32_cp0_read(ejtag_info, &config3, 16, 3))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config3, 16, 3))!= ERROR_OK)
 		return retval;
 
-	if ((retval = mips32_cp0_read(ejtag_info, &config4, 16, 4))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config4, 16, 4))!= ERROR_OK)
 		return retval;
 
-	if ((retval = mips32_cp0_read(ejtag_info, &config5, 16, 5))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config5, 16, 5))!= ERROR_OK)
 		return retval;
 
-	if ((retval = mips32_cp0_read(ejtag_info, &config7, 16, 7))!= ERROR_OK)
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config7, 16, 7))!= ERROR_OK)
 		return retval;
 
 	/* Read and store dspase and mtase (and other) architecture extension presence bits */
 	info.dspase = (config3 & 0x00000400) ? 1 : 0;		/* dsp ase */
-	info.mtase  = (config3 & 0x00000004) ? 1 : 0;		/* multithreading */
-
-	/* If multithreading then need to get more info */
-	/* TODO List */
-#if 0
-	if (info.mtase) {
-
-	}
-#endif
-
 	info.smase	= (config3 & 0x00000002) ? 1 : 0;		/* smartmips ase */
 	info.mtase  = (config3 & 0x00000004) ? 1 : 0;		/* multithreading */
 	info.m16ase = (config1 & 0x00000004) ? 1 : 0;		/* mips16(e) ase */
@@ -1481,7 +1688,7 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 		uint32_t width;
 		uint32_t guestCtl0;
 
-		if ((retval = mips32_cp0_read(ejtag_info, &guestCtl0, 12, 6)) != ERROR_OK)
+		if ((retval = mips32_pracc_cp0_read(ejtag_info, &guestCtl0, 12, 6)) != ERROR_OK)
 			return retval;
 
 		info.guestCtl1Present = (guestCtl0 >> 22) & 0x1;
@@ -1525,7 +1732,7 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 	/* If release 2 of Arch. then get exception base info */
 	if (((config >> 10) & 7) != 0) {	/* release 2 */
 		uint32_t  ebase;
-		if ((retval = mips32_cp0_read(ejtag_info, &ebase, 15, 1))!= ERROR_OK)
+		if ((retval = mips32_pracc_cp0_read(ejtag_info, &ebase, 15, 1))!= ERROR_OK)
 			return retval;
 
 		info.cpuid = (uint32_t)(ebase & 0x1ff);
@@ -1987,13 +2194,32 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 //      device->fw->sharedDataBkpts = FALSE;
 //   }
 
-	if (info.mtase)
-		strcpy(text, "true");
-	else
-		strcpy(text, "false");
+	if (info.mtase){
+		LOG_USER("multithreading: true");
 
-	LOG_USER ("multithreading: %s", &text[0]);
+		/* Get VPE and Thread info */
+		uint32_t tcbind;
+		uint32_t mvpconf0;
 
+		/* Read tcbind register */
+		if ((retval = mips32_pracc_cp0_read(ejtag_info, &tcbind, 2, 2))!= ERROR_OK)
+			return retval;
+
+		LOG_USER("curvpe: %d", (tcbind & 0xf));
+		LOG_USER(" curtc: %d", ((tcbind >> 21) & 0xff));
+
+		/* Read mvpconf0 register */
+		if ((retval = mips32_pracc_cp0_read(ejtag_info, &mvpconf0, 0, 2))!= ERROR_OK)
+			return retval;
+
+		LOG_USER(" numtc: %d", (mvpconf0 & 0xf)+1);
+		LOG_USER("numvpe: %d", ((mvpconf0 >> 10) & 0xf)+1);
+	}
+	else {
+		LOG_USER("multithreading: false");
+	}
+
+	/* does the core support a DSP */
 	if (info.dspase)
 		strcpy(text, "true");
 	else
@@ -2237,7 +2463,8 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 	return ERROR_OK;
 }
 
-extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
+//extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
+//extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
 COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -2247,10 +2474,11 @@ COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 	uint32_t idcode;
 	uint32_t impcode;
 	uint32_t ejtag_ctrl;
+	uint32_t dcr;
 	int retval;
 
 	retval = mips_ejtag_get_idcode(ejtag_info, &idcode);
-	retval = mips_ejtag_get_impcode (ejtag_info, &impcode);
+//	retval = mips_ejtag_get_impcode (ejtag_info, &impcode);
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 	ejtag_ctrl = ejtag_info->ejtag_ctrl;
 	retval = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
@@ -2261,6 +2489,13 @@ COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 	LOG_USER ("       idcode: 0x%8.8x", idcode);
 	LOG_USER ("      impcode: 0x%8.8x", impcode);
 	LOG_USER ("ejtag control: 0x%8.8x", ejtag_ctrl);
+
+//	ejtag_main_print_imp(ejtag_info);
+
+	/* Display current DCR */
+	retval = target_read_u32(target, EJTAG_DCR, &dcr);
+	LOG_USER("DCR: 0x%8.8x", dcr);
+
 
 #if 0
 	if (CMD_ARGC == 1)
