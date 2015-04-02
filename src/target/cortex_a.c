@@ -290,7 +290,7 @@ static int cortex_a_exec_opcode(struct target *target,
 
 	dscr = dscr_p ? *dscr_p : 0;
 
-	LOG_DEBUG("exec opcode 0x%08" PRIx32, opcode);
+	LOG_DEBUG("exec opcode 0x%08" PRIx32 ". %s", opcode, target_name(target));
 
 	/* Wait for InstrCompl bit to be set */
 	retval = cortex_a_wait_instrcmpl(target, dscr_p, false);
