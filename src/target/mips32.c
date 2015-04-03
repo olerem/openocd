@@ -2161,38 +2161,15 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 
 	/* Display Instruction Set Info */
 	LOG_USER ("instr Set: %s", &text[0]);
+	LOG_USER ("prid: %x", prid);
+	uint32_t rev = prid & 0x000000ff;
+	LOG_USER ("rtl: %x.%x.%x", (rev & 0xE0), (rev & 0x1C), (rev & 0x3));
 
 	LOG_USER ("Instr Cache: %d", info.iCacheSize);
 	LOG_USER (" Data Cache: %d", info.dCacheSize);
 
 	LOG_USER ("Max Number of Instr Breakpoints: %d", mips32->num_inst_bpoints);
 	LOG_USER ("Max Number of  Data Breakpoints: %d", mips32->num_data_bpoints);
-
-//	if (info.mtase) {
-//	  typedef U64 FWREG;
-//      FWREG mtreg[2];
-//      if ((err = FwGetMtRegBlock(handle, 2, mtreg)) != HDI_SUCCESS) goto CLEANUP;
-//      device->fw->vpeid = (U32)(mtreg[1] & 0x0f);                // read and store curvpe field
-//      device->fw->ejtagtc = (U32)((mtreg[1] >> 21) & 0xff);      // store ejtag thread id
-//      device->fw->visibletc = (U32)((mtreg[1] >> 21) & 0xff);    // visble thread reset to ejtag thread
-//      device->fw->numtc = (U32)((mtreg[0] & 0xff) + 1);
-//      device->fw->numvpe = (U32)(((mtreg[0] >>10) & 0x0f) + 1);
-//      if ((mtreg[0] >> 28) & 1) {
-//         if (GetITCBaseAddr(handle, NULL, NULL, &device->fw->numitc) != HDI_SUCCESS) device->fw->numitc = 0;
-//      } else {
-//         device->fw->numitc = 0;   // Gating Storage not present
-//      }
-//      memset(device->fw->tcmode, 0, sizeof(device->fw->tcmode));   // all tcs default to run mode
-//      device->fw->sharedInstBkpts = ((ibs >> 15) & 1) ? TRUE : FALSE;
-//      device->fw->sharedDataBkpts = ((dbs >> 15) & 1) ? TRUE : FALSE;
-//   } else {
-//      device->fw->vpeid = 0;
-//      device->fw->numtc = 1;
-//      device->fw->numvpe = 1;
-//      device->fw->numitc = 0;
-//      device->fw->sharedInstBkpts = FALSE;
-//      device->fw->sharedDataBkpts = FALSE;
-//   }
 
 	if (info.mtase){
 		LOG_USER("mta: true");
