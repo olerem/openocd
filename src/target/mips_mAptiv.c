@@ -45,7 +45,7 @@ static int mips_mAptiv_init_arch_info(struct target *target,
 
 	mips_mAptiv->common_magic = MIPSMAPTIV_COMMON_MAGIC;
 
-	/* initialize mips4k specific info */
+	/* initialize mips specific info */
 	mips32_init_arch_info(target, mips32, tap);
 	mips32->arch_info = mips_mAptiv;
 
