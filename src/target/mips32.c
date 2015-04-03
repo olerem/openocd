@@ -203,6 +203,9 @@ static const int setTable[] = {64,128,256,512,1024,2048,4096,8192,			  /* field-
 static const int bplTable[] = {0,4,8,16,32,64,128,256,512,1024,2048,4*1024,8*1024,16*1024,32*1024,64*1024}; /* field->bytes per line */
 static const int bplbitTable[] = {0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};									/* field->bits in bpl */
 
+static uint32_t  ftlb_ways[16] = {2,3,4,5, 6,7,8,0,   0,0,0,0, 0,0,0,0};
+static uint32_t  ftlb_sets[16] = {1,2,4,8, 16,32,64,128, 256,0,0,0, 0,0,0,0};
+
 static int mips32_get_core_reg(struct reg *reg)
 {
 	int retval;
@@ -463,6 +466,13 @@ int mips32_restore_context(struct target *target)
 		uint32_t mvpconf1;
 		uint32_t status;
 		uint32_t tmp_status;
+
+		/* Read Config1 registers */
+		retval = mips32_pracc_cp0_read(ejtag_info, &config1, 16, 3);
+		if (retval != ERROR_OK) {
+			LOG_DEBUG("reading config3 register failed");
+			return retval;
+		}
 
 		/* Read Config3 registers */
 		retval = mips32_pracc_cp0_read(ejtag_info, &config3, 16, 3);
@@ -1433,7 +1443,6 @@ static int mips32_verify_pointer(struct command_context *cmd_ctx,
 int mips32_cp0_command(struct command_invocation *cmd)
 {
 	int retval;
-	uint32_t reg_value;
 
 	struct target *target = get_current_target(CMD_CTX);
 	struct mips32_common *mips32 = target_to_mips32(target);
@@ -1615,16 +1624,6 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 
 	CPU_INFO info;
 
-	/* Will be added in the future */
-#if 0
-	/* MMU types */
-	uint32_t MMU_TLB = 0;
-	uint32_t MMU_BAT = 0;
-	uint32_t MMU_FMT = 0;
-	uint32_t MMU_RPU = 0;
-	uint32_t MMU_TLB_RPU = 0;
-#endif
-
 	char text[40]={0};
 	uint32_t ways, sets, bpl;
 
@@ -1678,8 +1677,9 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 	info.mtase  = (config3 & 0x00000004) ? 1 : 0;		/* multithreading */
 	info.m16ase = (config1 & 0x00000004) ? 1 : 0;		/* mips16(e) ase */
 	info.micromipsase = ((config3 >> 14) & 0x3) != 0;
-	info.mmuType = (config >> 7) & 7;					/* MMU Type Info */
+	info.mmutype = (config >> 7) & 7;					/* MMU Type Info */
 	info.vzase = (config3 & (1<<23)) ? 1 : 0;			/* VZ */
+	LOG_USER("vzase: %d", info.vzase);
 
 	/* Check if Virtualization supported */
 		/* TODO List */
@@ -1705,29 +1705,29 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 	info.mvh = (config5 & (1<<5)) ? 1 : 0;		/* mvh */
 
 	/* MMU Supported */
-	info.mmuType = (config >> 7) & 7;
 	info.tlbEntries = 0;
-#if 0
-	/*MMU types */
-	if ((info.mmuType == 3) && info.vzase) {
-		cpuinfo.tlbEntries = (U32)VTLB_SIZE;
-		FwGetTlbSize(handle, 0, &cpuinfo.tlbEntries);
+
+	/* MMU types */
+	if (((info.mmutype == 1) || (info.mmutype == 4)) || ((info.mmutype == 3) && info.vzase)) {
+		info.tlbEntries = (((config1 >> 25) & 0x3f)+1);
+		info.mmutype = (config >> 7) & 7;
+		if (info.mmutype == 1)
+			/* VTLB only   !!!Does not account for Config4.ExtVTLB */
+			info.tlbEntries = (uint32_t )(((config1 >> 25) & 0x3f)+1);   
+		else
+			/* root RPU */
+			if ((info.mmutype == 3) && info.vzase)
+				info.tlbEntries = (uint32_t )(((config1 >> 25) & 0x3f)+1);
+			else {
+				/*  VTLB and FTLB */
+				if (info.mmutype == 4) {
+					ways = ftlb_ways[(config4 >> 4) & 0xf];
+					sets = ftlb_sets[config4 & 0xf];
+					info.tlbEntries = (uint32_t )((((config1 >> 25) & 0x3f)+1) + (ways*sets));
+				} else
+					info.tlbEntries = 0;
+			}
 	}
-
-	MMU_TLB =  ((MMUTYPE == 1) || (MMUTYPE == 4));
-
-	if (info.mmuType)
-		MMU_BAT =  (MMUTYPE == 2);
-
-	if (info.mmuType)
-		MMU_FMT =  (MMUTYPE == 3);
-
-	if (info.mmuType)
-		MMU_RPU =  ((MMUTYPE == 3) && info.vzase);
-
-	if (info.mmuType)
-		MMU_TLB_RPU = (MMU_TLB || MMU_RPU);
-#endif
 
 	/* If release 2 of Arch. then get exception base info */
 	if (((config >> 10) & 7) != 0) {	/* release 2 */
@@ -2195,7 +2195,7 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 //   }
 
 	if (info.mtase){
-		LOG_USER("multithreading: true");
+		LOG_USER("mta: true");
 
 		/* Get VPE and Thread info */
 		uint32_t tcbind;
@@ -2216,8 +2216,28 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 		LOG_USER("numvpe: %d", ((mvpconf0 >> 10) & 0xf)+1);
 	}
 	else {
-		LOG_USER("multithreading: false");
+		LOG_USER("mta: false");
 	}
+
+	switch (info.mmutype) {
+		case MMU_TLB:
+			strcpy (text, "TLB");
+			break;
+		case MMU_BAT:
+			strcpy (text, "BAT");
+			break;
+		case MMU_FIXED:
+			strcpy (text, "FIXED");
+			break;
+		case MMU_DUAL_VTLB_FTLB:
+			strcpy (text, "DUAL VAR/FIXED");
+			break;
+		default:
+			strcpy (text, "Unknown");
+	}
+
+	LOG_USER("MMU Type: %s", &text[0]);
+	LOG_USER("TLB Enties: %d", info.tlbEntries);
 
 	/* does the core support a DSP */
 	if (info.dspase)

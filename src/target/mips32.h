@@ -780,20 +780,10 @@ typedef enum {
    MIPS_I5500 = MIPS_CORE_I5500,
 } CPUTYPE;
 
-#if 0
-enum CPU_TYPE { MIPS_4Kc, MIPS_4Km, MIPS_4Kp, MIPS_4KEc, MIPS_4KEm, MIPS_4KEp, MIPS_4KSc, MIPS_4KSd,
-	   MIPS_M4K, MIPS_24Kc, MIPS_24Kf, MIPS_24KEc, MIPS_24KEf, MIPS_34Kc, MIPS_34Kf,
-	   MIPS_5Kc, MIPS_5Kf, MIPS_5KEc, MIPS_5KEf, MIPS_20Kc, MIPS_25Kf,
-	   MIPS_AU1000, MIPS_AU1100, MIPS_AU1200, MIPS_AU1500, MIPS_AU1550,
-	   MIPS_74Kc, MIPS_74Kf, MIPS_84Kc, MIPS_84Kf, MIPS_BCM,
-	   MIPS_1004Kc, MIPS_1004Kf, MIPS_1074Kc, MIPS_1074Kf, MIPS_M14Kc, MIPS_M14K, MIPS_M14Kf, 
-	   MIPS_MP32, MIPS_M14KE, MIPS_M14KEc, MIPS_PROAPTIV, MIPS_PROAPTIV_CM,
-	   MIPS_INTERAPTIV, MIPS_INTERAPTIV_CM,
-	   MIPS_M14KEf, MIPS_M14KEcf,
-	   MIPS_M5100, MIPS_M5150,
-	   MIPS_P5600, MIPS_I5500,
-};
-#endif
+#define MMU_TLB 1
+#define MMU_BAT 2
+#define MMU_FIXED 3
+#define MMU_DUAL_VTLB_FTLB 4
 
 enum CPU_VENDOR {
 	MIPS_CORE,
@@ -877,8 +867,9 @@ typedef struct {
 	enum EJTAG_VERSION ejtagVersion;	//EJTAG version
 	uint32_t iCacheSize;
 	uint32_t dCacheSize;
-	bool mmuType;
+	uint32_t mmutype;
 	uint32_t tlbEntries;
+	uint32_t gtlbEntries;   // guest TLB
 	bool fdcPresent;
 	bool evaPresent;					// Enhanced virtual address (introduced with proAptiv).
 	bool systemTracePresent;
