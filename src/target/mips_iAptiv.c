@@ -31,12 +31,20 @@
 
 #include "breakpoints.h"
 #include "mips32.h"
-#include "mips_m4k.h"
-#include "mips_iAptiv.h"
 #include "mips_common.h"
+#include "mips_iAptiv.h"
 #include "mips32_dmaacc.h"
 #include "target_type.h"
 #include "register.h"
+
+
+#define CMDALL_HALT 0
+static const struct {
+	unsigned option;
+	const char *arg;
+} cmdall_cmd_list[1] = {
+	{ CMDALL_HALT, "halt"},
+};
 
 static int mips_iAptiv_init_arch_info(struct target *target,
 		struct mips_iAptiv_common *mips_iAptiv, struct jtag_tap *tap)
@@ -62,17 +70,67 @@ static int mips_iAptiv_target_create(struct target *target, Jim_Interp *interp)
 	return ERROR_OK;
 }
 
+static int mips_iAptiv_halt_all(struct target *target)
+{
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+	uint32_t ejtag_ctrl;
+
+	int retval = ERROR_OK;
+	struct target *curr;
+
+	do {
+		int ret = ERROR_OK;
+		curr = target;
+		if (curr->state != TARGET_HALTED) {
+			LOG_INFO("halt core");
+			mips32 = target_to_mips32(curr);
+			ejtag_info = &mips32->ejtag_info;
+			ret = mips_ejtag_enter_debug(ejtag_info);
+			if (ret != ERROR_OK) {
+				LOG_ERROR("halt failed target: %s", curr->cmd_name);
+				retval = ret;
+			}
+		}
+		target = target->next;
+	} while (curr->next != (struct target *)NULL);
+	return retval;
+}
+
 COMMAND_HANDLER(mips_ia_handle_cmdall_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
-	struct mips_m4k_common *mips_m4k = target_to_m4k(target);
-	struct mips_ejtag *ejtag_info = &mips_m4k->mips32.ejtag_info;
+	struct mips32_common *mips32 = target_to_mips32(target);
+//	struct mips_ejtag *ejtag_info = &mips_iAptiv->mips32.ejtag_info;
 
-	if (CMD_ARGC == 1)
-		COMMAND_PARSE_NUMBER(uint, CMD_ARGV[0], ejtag_info->scan_delay);
-	else if (CMD_ARGC > 1)
-			return ERROR_COMMAND_SYNTAX_ERROR;
+	int retval = -1;
+	int i = 0;
 
+	if ((CMD_ARGC >= 2) || (CMD_ARGC == 0)){
+		LOG_DEBUG("ERROR_COMMAND_SYNTAX_ERROR");
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+
+	if (CMD_ARGC == 1) {
+		for (i = 0; i < 1 ; i++) {
+			if (strcmp(CMD_ARGV[0], cmdall_cmd_list[i].arg) == 0) {
+				switch (i) {
+					case CMDALL_HALT:
+						LOG_INFO ("cmdall halt");
+						retval = mips_iAptiv_halt_all(target);
+						return retval;
+						break;
+					default:
+						LOG_ERROR("Invalid cmdall command '%s' not found", CMD_ARGV[0]);
+						return ERROR_COMMAND_SYNTAX_ERROR;
+				}
+			} else {
+					LOG_ERROR("Invalid cmdall command '%s' not found", CMD_ARGV[0]);
+					return ERROR_COMMAND_SYNTAX_ERROR;
+			}
+		}
+	}
+	
 	return ERROR_OK;
 }
 

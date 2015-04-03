@@ -139,7 +139,7 @@ struct mips_iAptiv_common {
 	struct mips32_common mips32;
 };
 
-inline struct mips_iaptiv_common *target_to_iAptiv(struct target *target)
+inline struct mips_iAptiv_common *target_to_iAptiv(struct target *target)
 {
 	return container_of(target->arch_info,
 			struct mips_iAptiv_common, mips32);
