@@ -44,7 +44,6 @@ static int mips_m4k_init_arch_info(struct target *target,
 		struct mips_m4k_common *mips_m4k, struct jtag_tap *tap)
 {
 	struct mips32_common *mips32 = &mips_m4k->mips32;
-
 	mips_m4k->common_magic = MIPSM4K_COMMON_MAGIC;
 
 	/* initialize mips4k specific info */
