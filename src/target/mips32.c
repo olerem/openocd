@@ -2270,7 +2270,6 @@ COMMAND_HANDLER(mips32_handle_dsp_command)
 	if (CMD_ARGC >= 3) 
 		return ERROR_COMMAND_SYNTAX_ERROR;
 
-	LOG_INFO ("mips32->mmips = %x   mips32->dsp_implemented = %x, mips32->dsp_rev = %x",mips32->mmips, mips32->dsp_implemented, mips32->dsp_rev);
 	/* Check if DSP access supported or not */
 	if (mips32->dsp_implemented == DSP_NOT_IMP) {
 
@@ -2460,8 +2459,69 @@ COMMAND_HANDLER(mips32_handle_invalidate_cache_command)
 	return ERROR_OK;
 }
 
-//extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
-//extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
+COMMAND_HANDLER(mips32_handle_dump_tlb_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+	int retval;
+
+	uint32_t data[4];
+
+	if (target->state != TARGET_HALTED) {
+		LOG_WARNING("target not halted");
+		return ERROR_TARGET_NOT_HALTED;
+	}
+
+	if (CMD_ARGC >= 2){
+		LOG_DEBUG("ERROR_COMMAND_SYNTAX_ERROR");
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+
+	uint32_t config;	/* cp0 config - 16, 0 */
+	uint32_t config1;	/* cp0 config1 - 16, 1 */
+
+	/* Read Config register */
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK)
+		return retval;
+
+	/* Read Config1 register */
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK)
+		return retval;
+	else {
+		uint32_t mmutype;
+		uint32_t tlbEntries;
+
+		mmutype = (config >> 7) & 7;
+		if (mmutype == 0) {
+			LOG_USER("mmutype: %d, No TLB configured", mmutype);
+			return ERROR_OK;
+		}
+
+		if ((CMD_ARGC == 0) || (CMD_ARGC == 1)){
+			uint32_t i = 0;
+
+			/* Get number of TLB entries */
+			if (CMD_ARGC == 1) {
+				COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], i);
+				tlbEntries = i+1;
+			} else
+				tlbEntries = (((config1 >> 25) & 0x3f)+1);
+
+			LOG_USER("index\t entrylo0\t entrylo1\t  entryhi\t pagemask");
+			for (; i < tlbEntries; i++) {
+				mips32_pracc_read_tlb_entry(ejtag_info, &data[0], i);
+				command_print(CMD_CTX, "  %d\t0x%8.8x\t0x%8.8x\t0x%8.8x\t0x%8.8x", i, data[0], data[1], data[2], data[3]);
+			}
+
+		}
+	}
+
+	return ERROR_OK;
+}
+
+extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
+extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
 COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -2475,7 +2535,7 @@ COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 	int retval;
 
 	retval = mips_ejtag_get_idcode(ejtag_info, &idcode);
-//	retval = mips_ejtag_get_impcode (ejtag_info, &impcode);
+	retval = mips_ejtag_get_impcode (ejtag_info, &impcode);
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 	ejtag_ctrl = ejtag_info->ejtag_ctrl;
 	retval = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
@@ -2487,28 +2547,12 @@ COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 	LOG_USER ("      impcode: 0x%8.8x", impcode);
 	LOG_USER ("ejtag control: 0x%8.8x", ejtag_ctrl);
 
-//	ejtag_main_print_imp(ejtag_info);
+	ejtag_main_print_imp(ejtag_info);
 
 	/* Display current DCR */
 	retval = target_read_u32(target, EJTAG_DCR, &dcr);
-	LOG_USER("DCR: 0x%8.8x", dcr);
+	LOG_USER("          DCR: 0x%8.8x", dcr);
 
-
-#if 0
-	if (CMD_ARGC == 1)
-		COMMAND_PARSE_NUMBER(uint, CMD_ARGV[0], ejtag_info->scan_delay);
-	else if (CMD_ARGC > 1)
-			return ERROR_COMMAND_SYNTAX_ERROR;
-
-	command_print(CMD_CTX, "scan delay: %d nsec", ejtag_info->scan_delay);
-	if (ejtag_info->scan_delay >= MIPS32_SCAN_DELAY_LEGACY_MODE) {
-		ejtag_info->mode = 0;
-		command_print(CMD_CTX, "running in legacy mode");
-	} else {
-		ejtag_info->mode = 1;
-		command_print(CMD_CTX, "running in fast queued mode");
-	}
-#endif
 	return ERROR_OK;
 }
 
@@ -2553,6 +2597,13 @@ static const struct command_registration mips32_exec_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.help = "display/set scan delay in nano seconds",
 		.usage = "[value]",
+	},
+	{
+		.name = "dump_tlb",
+		.handler = mips32_handle_dump_tlb_command,
+		.mode = COMMAND_ANY,
+		.help = "dump_tlb",
+		.usage = "[entry]",
 	},
 	{
 		.name = "ejtag_reg",

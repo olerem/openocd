@@ -1248,6 +1248,49 @@ exit:
 	return ctx.retval;
 }
 
+int mips32_pracc_read_tlb_entry(struct mips_ejtag *ejtag_info, uint32_t *data, uint32_t index)
+{
+	struct pracc_queue_info ctx = {.max_code = 49};
+	pracc_queue_init(&ctx);
+	if (ctx.retval != ERROR_OK)
+		goto exit;
+
+	static int tlb_read_code[] = {
+		MIPS32_MFC0(8, 2, 0),			/* Read C0_ENTRYLO0 */
+		MIPS32_MFC0(8, 3, 0),			/* Read C0_ENTRYLO1 */
+		MIPS32_MFC0(8, 10, 0),			/* Read C0_ENTRYHI */
+		MIPS32_MFC0(8, 5, 0)			/* Read C0_PAGEMASK */
+	};
+
+	dump = 0;
+	pracc_add(&ctx, 0, MIPS32_LUI(15, PRACC_UPPER_BASE_ADDR)); /* $15 = MIP32_PRACC_BASE_ADDR */
+	pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(index)));		   /* Load TLB Index to $8 */
+	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(index)));
+
+	pracc_add(&ctx, 0, MIPS32_MTC0(8, 0, 0));				 /* write C0_Index */
+	pracc_add(&ctx, 0, MIPS32_TLBR());						 /* Read TLB entry specified by Index */
+
+
+	for (uint32_t i = 0; i <ARRAY_SIZE(tlb_read_code); i++) {
+		pracc_add(&ctx, 0, tlb_read_code[i]);
+		pracc_add(&ctx, MIPS32_PRACC_PARAM_OUT + (i * 4),
+				  MIPS32_SW(8, PRACC_OUT_OFFSET + (i * 4), 15));
+	}
+
+	pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(ejtag_info->reg8)));		/* restore upper 16 of $8 */
+	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(ejtag_info->reg8)));	/* restore lower 16 of $8 */
+
+	pracc_add(&ctx, 0, MIPS32_B(NEG16(ctx.code_count + 1)));	/* jump to start */
+	pracc_add(&ctx, 0, MIPS32_MTC0(15, 31, 0));					/* load $15 in DeSave */
+
+	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, data);
+exit:
+	dump = 0;
+	pracc_queue_free(&ctx);
+
+	return ctx.retval;
+}
+
 int mips32_pracc_read_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 {
 	int i;

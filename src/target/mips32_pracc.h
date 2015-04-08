@@ -69,6 +69,8 @@ int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ct
 
 int mips32_pracc_read_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 
+int mips32_pracc_read_tlb_entry(struct mips_ejtag *ejtag_info, uint32_t *data, uint32_t index);
+
 /**
  * \b mips32_read_fpu_regs
  *

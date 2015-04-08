@@ -589,6 +589,7 @@ struct mips32_algorithm {
 #define MIPS32_OP_ORI	0x0D
 #define MIPS32_OP_XORI	0x0E
 #define MIPS32_OP_XOR	0x26
+#define MIPS32_OP_TLB	0x10
 #define MIPS32_OP_SLTU  0x2B
 #define MIPS32_OP_SLLV	0x04
 #define MIPS32_OP_SRA	0x03
@@ -612,6 +613,11 @@ struct mips32_algorithm {
 	(((opcode) << 26) | ((rs) << 21) | ((rt) << 16) | ((rd) << 11) | ((shamt) << 6) | (funct))
 #define MIPS32_I_INST(opcode, rs, rt, immd) \
 	(((opcode) << 26) | ((rs) << 21) | ((rt) << 16) | (immd))
+
+#define MIPS32_TLB_INST(opcode, co, rs, rt)						\
+	(((opcode) << 26) | ((co) << 25) | ((rs) << 6) | (rt))
+
+
 #define MIPS32_J_INST(opcode, addr)	(((opcode) << 26) | (addr))
 
 #define MIPS32_NOP						0
@@ -658,6 +664,7 @@ struct mips32_algorithm {
 #define MIPS32_SLTU(dst, src, tar)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLTU)
 #define MIPS32_SLLV(dst, tar, src)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_SLLV)
 #define MIPS32_SYNCI(off, base)			MIPS32_I_INST(MIPS32_OP_REGIMM, base, MIPS32_OP_SYNCI, off)
+#define MIPS32_TLBR()					MIPS32_TLB_INST(MIPS32_OP_TLB, 1, 0, 1)
 
 #define MIPS32_SYNC			0xF
 #define MIPS32_SYNCI_STEP	0x1	/* reg num od address step size to be used with synci instruction */
