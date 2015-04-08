@@ -74,7 +74,7 @@ static int mips_iAptiv_halt_all(struct target *target)
 {
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
-	uint32_t ejtag_ctrl;
+//	uint32_t ejtag_ctrl;
 
 	int retval = ERROR_OK;
 	struct target *curr;
@@ -100,8 +100,6 @@ static int mips_iAptiv_halt_all(struct target *target)
 COMMAND_HANDLER(mips_ia_handle_cmdall_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
-	struct mips32_common *mips32 = target_to_mips32(target);
-//	struct mips_ejtag *ejtag_info = &mips_iAptiv->mips32.ejtag_info;
 
 	int retval = -1;
 	int i = 0;
@@ -139,8 +137,8 @@ static const struct command_registration mips_iAptiv_exec_command_handlers[] = {
 		.name = "cmdall",
 		.handler = mips_ia_handle_cmdall_command,
 		.mode = COMMAND_EXEC,
-		.usage = "cmdall halt",
-		.help = "cmdall allows any command to be executed by all devices",
+		.usage = "halt",
+		.help = "cmdall halt command will halt all cores",
 	},
 	COMMAND_REGISTRATION_DONE
 };
