@@ -2504,6 +2504,12 @@ COMMAND_HANDLER(mips32_handle_dump_tlb_command)
 			/* Get number of TLB entries */
 			if (CMD_ARGC == 1) {
 				COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], i);
+				tlbEntries = (((config1 >> 25) & 0x3f)+1);
+				if (i >= tlbEntries) {
+					LOG_USER ("Invalid TLB entry specified - Valid entry #'s are 0-%d", tlbEntries-1);
+					return ERROR_COMMAND_SYNTAX_ERROR;
+				}
+
 				tlbEntries = i+1;
 			} else
 				tlbEntries = (((config1 >> 25) & 0x3f)+1);
