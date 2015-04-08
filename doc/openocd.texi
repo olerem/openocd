@@ -1,3 +1,4 @@
+
 \input texinfo @c -*-texinfo-*-
 @c %**start of header
 @setfilename openocd.info
@@ -4221,6 +4222,8 @@ compact Thumb2 instruction set.
 @item @code{fa526} -- resembles arm920 (w/o Thumb)
 @item @code{feroceon} -- resembles arm926
 @item @code{mips_m4k} -- a MIPS core
+@item @code{mips_mApticv} -- a MIPS microAptiv core
+@item @code{mips_iApticv} -- a MIPS interAptiv core (with limitation)
 @item @code{xscale} -- this is actually an architecture,
 not a CPU type. It is based on the ARMv5 architecture.
 @item @code{openrisc} -- this is an OpenRISC 1000 core.
