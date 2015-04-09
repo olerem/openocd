@@ -3220,6 +3220,22 @@ COMMAND_HANDLER(cortex_a_handle_force_apb_ap_command)
 	return ERROR_COMMAND_SYNTAX_ERROR;
 }
 
+COMMAND_HANDLER(cortex_a_handle_flash_all_caches)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (armv7a->armv7a_mmu.armv7a_cache.flush_all_data_cache)
+		armv7a->armv7a_mmu.armv7a_cache.flush_all_data_cache(target);
+	else {
+		LOG_ERROR("flush_all_data_cache are not defined");
+		return ERROR_FAIL;
+	}
+
+	return ERROR_OK;
+}
+
+
 static const struct command_registration cortex_a_exec_command_handlers[] = {
 	{
 		.name = "cache_info",
@@ -3260,6 +3276,13 @@ static const struct command_registration cortex_a_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.help = "force APB-AP access for memory operations",
 		.usage = "(1|0)",
+	},
+	{
+		.name = "flash_all_caches",
+		.handler = cortex_a_handle_flash_all_caches,
+		.mode = COMMAND_EXEC,
+		.help = "flash l1 and if configured l2x cache",
+		.usage = "",
 	},
 
 
