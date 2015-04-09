@@ -516,27 +516,30 @@ static int armv7a_l2x_cache_init(struct target *target, uint32_t base, uint32_t 
 	struct target *curr;
 
 	struct armv7a_common *armv7a = target_to_armv7a(target);
+	if (armv7a->armv7a_mmu.armv7a_cache.l2_cache) {
+		LOG_ERROR("L2 cache was already initialised\n");
+		return ERROR_FAIL;
+	}
+
 	l2x_cache = calloc(1, sizeof(struct armv7a_l2x_cache));
 	l2x_cache->base = base;
 	l2x_cache->way = way;
-	/*LOG_INFO("cache l2 initialized base %x  way %d",
-	l2x_cache->base,l2x_cache->way);*/
-	if (armv7a->armv7a_mmu.armv7a_cache.l2_cache)
-		LOG_INFO("cache l2 already initialized\n");
 	armv7a->armv7a_mmu.armv7a_cache.l2_cache = l2x_cache;
 	/*  initialize l1 / l2x cache function  */
 	armv7a->armv7a_mmu.armv7a_cache.flush_all_data_cache
 		= armv7a_l2x_flush_all_data;
 	armv7a->armv7a_mmu.armv7a_cache.display_cache_info =
 		armv7a_handle_l2x_cache_info_command;
-	/*  initialize all target in this cluster (smp target)
+	/*  initialize all targets in this cluster (smp target)
 	 *  l2 cache must be configured after smp declaration */
 	while (head != (struct target_list *)NULL) {
 		curr = head->target;
 		if (curr != target) {
 			armv7a = target_to_armv7a(curr);
-			if (armv7a->armv7a_mmu.armv7a_cache.l2_cache)
+			if (armv7a->armv7a_mmu.armv7a_cache.l2_cache) {
 				LOG_ERROR("smp target : cache l2 already initialized\n");
+				return ERROR_FAIL;
+			}
 			armv7a->armv7a_mmu.armv7a_cache.l2_cache = l2x_cache;
 			armv7a->armv7a_mmu.armv7a_cache.flush_all_data_cache =
 				armv7a_l2x_flush_all_data;
@@ -545,7 +548,7 @@ static int armv7a_l2x_cache_init(struct target *target, uint32_t base, uint32_t 
 		}
 		head = head->next;
 	}
-	return JIM_OK;
+	return ERROR_OK;
 }
 
 COMMAND_HANDLER(handle_cache_l2x)
@@ -561,9 +564,7 @@ COMMAND_HANDLER(handle_cache_l2x)
 	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], way);
 
 	/* AP address is in bits 31:24 of DP_SELECT */
-	armv7a_l2x_cache_init(target, base, way);
-
-	return ERROR_OK;
+	return armv7a_l2x_cache_init(target, base, way);
 }
 
 int armv7a_handle_cache_info_command(struct command_context *cmd_ctx,
@@ -833,7 +834,7 @@ static const struct command_registration l2_cache_commands[] = {
 	{
 		.name = "l2x",
 		.handler = handle_cache_l2x,
-		.mode = COMMAND_EXEC,
+		.mode = COMMAND_ANY,
 		.help = "configure l2x cache "
 			"",
 		.usage = "[base_addr] [number_of_way]",
@@ -845,7 +846,7 @@ static const struct command_registration l2_cache_commands[] = {
 const struct command_registration l2x_cache_command_handlers[] = {
 	{
 		.name = "cache_config",
-		.mode = COMMAND_EXEC,
+		.mode = COMMAND_ANY,
 		.help = "cache configuration for a target",
 		.usage = "",
 		.chain = l2_cache_commands,
