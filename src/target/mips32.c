@@ -2526,10 +2526,11 @@ COMMAND_HANDLER(mips32_handle_dump_tlb_command)
 	return ERROR_OK;
 }
 
-extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
-extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
+//extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
+//extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
 COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 {
+#if 0
 	struct target *target = get_current_target(CMD_CTX);
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
@@ -2558,6 +2559,7 @@ COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 	/* Display current DCR */
 	retval = target_read_u32(target, EJTAG_DCR, &dcr);
 	LOG_USER("          DCR: 0x%8.8x", dcr);
+#endif
 
 	return ERROR_OK;
 }
