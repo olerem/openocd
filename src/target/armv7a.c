@@ -790,6 +790,7 @@ int armv7a_init_arch_info(struct target *target, struct armv7a_common *armv7a)
 	armv7a->armv7a_mmu.armv7a_cache.ctype = -1;
 	armv7a->armv7a_mmu.armv7a_cache.flush_all_data_cache = NULL;
 	armv7a->armv7a_mmu.armv7a_cache.display_cache_info = NULL;
+	armv7a->armv7a_mmu.armv7a_cache.auto_cache_enabled = 1;
 	return ERROR_OK;
 }
 
@@ -853,13 +854,15 @@ const struct command_registration l2x_cache_command_handlers[] = {
 	COMMAND_REGISTRATION_DONE
 };
 
-
 const struct command_registration armv7a_command_handlers[] = {
 	{
 		.chain = dap_command_handlers,
 	},
 	{
 		.chain = l2x_cache_command_handlers,
+	},
+	{
+		.chain = arm7a_cache_command_handlers,
 	},
 	COMMAND_REGISTRATION_DONE
 };
