@@ -26,7 +26,7 @@
 #include "target_type.h"
 
 /* L2 is not specific to armv7a  a specific file is needed */
-static int arm7a_l2x_inval_all(struct target *target)
+static int arm7a_l2x_flush_all_data(struct target *target)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
@@ -69,11 +69,11 @@ COMMAND_HANDLER(arm7a_l2x_cache_info_command)
 			&armv7a->armv7a_mmu.armv7a_cache);
 }
 
-COMMAND_HANDLER(arm7a_l2x_cache_inval_all_command)
+COMMAND_HANDLER(arm7a_l2x_cache_flash_all_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
 
-	return arm7a_l2x_inval_all(target);
+	return arm7a_l2x_flush_all_data(target);
 }
 
 static const struct command_registration arm7a_l2x_cache_commands[] = {
@@ -85,10 +85,10 @@ static const struct command_registration arm7a_l2x_cache_commands[] = {
 		.usage = "",
 	},
 	{
-		.name = "inval_all",
-		.handler = arm7a_l2x_cache_inval_all_command,
+		.name = "flash_all",
+		.handler = arm7a_l2x_cache_flash_all_command,
 		.mode = COMMAND_ANY,
-		.help = "invalidate complete l2x cache",
+		.help = "flash complete l2x cache",
 		.usage = "",
 	},
 	COMMAND_REGISTRATION_DONE
