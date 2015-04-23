@@ -34,7 +34,6 @@ static int arm7a_l2x_flush_all_data(struct target *target)
 	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
 		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
 	uint32_t l2_way_val = (1 << l2x_cache->way) - 1;
-	int retval;
 
 	return target_write_phys_memory(target,
 			l2x_cache->base + L2X0_CLEAN_INV_WAY,
