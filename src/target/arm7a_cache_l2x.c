@@ -58,7 +58,7 @@ static int arm7a_handle_l2x_cache_info_command(struct command_context *cmd_ctx,
 	return ERROR_OK;
 }
 
-static const struct l2c_init_data of_l2c310_data __initconst = {
+static const struct l2c_init_data of_l2c310_data = {
 	.type = "L2C-310",
 	.way_size_0 = SZ_8K,
 	.num_lock = 8,
@@ -78,7 +78,7 @@ static const struct l2c_init_data of_l2c310_data __initconst = {
 	},
 };
 
-static const struct l2c_init_data of_l2c310_coherent_data __initconst = {
+static const struct l2c_init_data of_l2c310_coherent_data = {
 	.type = "L2C-310 Coherent",
 	.way_size_0 = SZ_8K,
 	.num_lock = 8,
@@ -97,7 +97,7 @@ static const struct l2c_init_data of_l2c310_coherent_data __initconst = {
 	},
 };
 
-static const struct l2c_init_data of_aurora_with_outer_data __initconst = {
+static const struct l2c_init_data of_aurora_with_outer_data = {
 	.type = "Aurora",
 	.way_size_0 = SZ_4K,
 	.num_lock = 4,
@@ -116,7 +116,7 @@ static const struct l2c_init_data of_aurora_with_outer_data __initconst = {
 	},
 };
 
-static const struct l2c_init_data of_aurora_no_outer_data __initconst = {
+static const struct l2c_init_data of_aurora_no_outer_data = {
 	.type = "Aurora",
 	.way_size_0 = SZ_4K,
 	.num_lock = 4,
@@ -129,7 +129,7 @@ static const struct l2c_init_data of_aurora_no_outer_data __initconst = {
 	},
 };
 
-static const struct l2c_init_data of_bcm_l2x0_data __initconst = {
+static const struct l2c_init_data of_bcm_l2x0_data = {
 	.type = "BCM-L2C-310",
 	.way_size_0 = SZ_8K,
 	.num_lock = 8,
