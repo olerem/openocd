@@ -25,21 +25,18 @@
 #include "target.h"
 #include "target_type.h"
 
-/* L2 is not specific to armv7a  a specific file is needed */
+
 static int arm7a_l2x_flush_all_data(struct target *target)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
 		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
-	uint32_t base = l2x_cache->base;
-	uint32_t l2_way = l2x_cache->way;
-	uint32_t l2_way_val = (1 << l2_way) - 1;
+	uint32_t l2_way_val = (1 << l2x_cache->way) - 1;
 	int retval;
 
-	retval = target_write_phys_memory(target,
-			base + L2X0_CLEAN_INV_WAY,
+	return target_write_phys_memory(target,
+			l2x_cache->base + L2X0_CLEAN_INV_WAY,
 			4, 1, (uint8_t *)&l2_way_val);
-	return retval;
 }
 
 static int arm7a_handle_l2x_cache_info_command(struct command_context *cmd_ctx,
