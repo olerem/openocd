@@ -2634,7 +2634,7 @@ static int cortex_a_read_memory_ahb(struct target *target, uint32_t address,
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	uint8_t apsel = swjdp->apsel;
 
-	if (!armv7a->memory_ap_available || (apsel =! armv7a->memory_ap))
+	if (!armv7a->memory_ap_available || (apsel != armv7a->memory_ap))
 		return target_read_memory(target, address, size, count, buffer);
 
 	/* cortex_a handles unaligned memory access */
@@ -2719,6 +2719,8 @@ static int cortex_a_write_memory(struct target *target, uint32_t address,
 	}
 	retval = cortex_a_write_apb_ab_memory(target, address, size, count, buffer);
 
+	armv7a_cache_auto_flash_on_write(target, address, size * count);
+
 	return retval;
 }
 
@@ -2732,7 +2734,7 @@ static int cortex_a_write_memory_ahb(struct target *target, uint32_t address,
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	uint8_t apsel = swjdp->apsel;
 
-	if (!armv7a->memory_ap_available || (apsel =! armv7a->memory_ap))
+	if (!armv7a->memory_ap_available || (apsel != armv7a->memory_ap))
 		return target_write_memory(target, address, size, count, buffer);
 
 	/* cortex_a handles unaligned memory access */
