@@ -25,8 +25,6 @@
 #include "target.h"
 #include "target_type.h"
 
-#define L2X0_CLEAN_INV_WAY              0x7FC
-
 /* L2 is not specific to armv7a  a specific file is needed */
 static int arm7a_l2x_inval_all(struct target *target)
 {
