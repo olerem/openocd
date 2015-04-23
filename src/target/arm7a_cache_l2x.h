@@ -103,6 +103,23 @@
 
 #define L2X0_WAY_SIZE_SHIFT		3
 
+struct l2x0_regs {
+	unsigned long phy_base;
+	unsigned long aux_ctrl;
+	/*
+	 * Whether the following registers need to be saved/restored
+	 * depends on platform
+	 */
+	unsigned long tag_latency;
+	unsigned long data_latency;
+	unsigned long filter_start;
+	unsigned long filter_end;
+	unsigned long prefetch_ctrl;
+	unsigned long pwr_ctrl;
+	unsigned long ctrl;
+	unsigned long aux2_ctrl;
+};
+
 struct outer_cache_fns {
 	void (*inv_range)(unsigned long, unsigned long);
 	void (*clean_range)(unsigned long, unsigned long);
@@ -121,11 +138,11 @@ struct l2c_init_data {
 	const char *type;
 	unsigned way_size_0;
 	unsigned num_lock;
-	void (*of_parse)(const struct device_node *, u32 *, u32 *);
-	void (*enable)(void __iomem *, u32, unsigned);
-	void (*fixup)(void __iomem *, u32, struct outer_cache_fns *);
-	void (*save)(void __iomem *);
-	void (*configure)(void __iomem *);
+
+	void (*enable)(uint32_t, uint32_t, unsigned);
+	void (*fixup)(uint32_t, uint32_t, struct outer_cache_fns *);
+	void (*save)(uint32_t);
+	void (*configure)(uint32_t);
 	struct outer_cache_fns outer_cache;
 };
 
