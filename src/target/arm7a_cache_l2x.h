@@ -13,12 +13,9 @@
  *   GNU General Public License for more details.                          *
  ***************************************************************************/
 
-#ifndef ARM7A_CACHE_H
-#define ARM7A_CACHE_H
+#ifndef ARM7A_CACHE_L2X_H
+#define ARM7A_CACHE_L2X_H
 
-#include "arm_jtag.h"
-#include "arm7a_cache_l2x.h"
-
-extern const struct command_registration arm7a_cache_command_handlers[];
+extern const struct command_registration arm7a_l2x_cache_command_handler[];
 
 #endif
