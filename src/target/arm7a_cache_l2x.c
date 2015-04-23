@@ -25,7 +25,9 @@
 #include "target.h"
 #include "target_type.h"
 
-
+/*
+ * clean and invalidate complete l2x cache
+ */
 static int arm7a_l2x_flush_all_data(struct target *target)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
