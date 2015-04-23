@@ -92,6 +92,7 @@ ARM_DEBUG_SRC = \
 	arm_semihosting.c \
 	arm_adi_v5.c \
 	arm7a_cache.c \
+	arm7a_cache_l2x.c \
 	adi_v5_jtag.c \
 	adi_v5_swd.c \
 	embeddedice.c \
@@ -138,6 +139,7 @@ noinst_HEADERS = \
 	arm_jtag.h \
 	arm_adi_v5.h \
 	arm7a_cache.h \
+	arm7a_cache_l2x.h \
 	arm_disassembler.h \
 	arm_opcodes.h \
 	arm_simulator.h \

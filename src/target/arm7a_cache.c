@@ -40,6 +40,9 @@ static const struct command_registration arm7a_cache_commands[] = {
 		.help = "print cache realted information",
 		.usage = "",
 	},
+	{
+		.chain = arm7a_l2x_cache_command_handler,
+	},
 	COMMAND_REGISTRATION_DONE
 };
 
