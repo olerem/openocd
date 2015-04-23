@@ -16,6 +16,8 @@
 #ifndef ARM7A_CACHE_L2X_H
 #define ARM7A_CACHE_L2X_H
 
+#define L2X0_CACHE_LINE_SIZE		32
+
 /* source: linux/arch/arm/include/asm/hardware/cache-l2x0.h */
 #define L2X0_CACHE_ID			0x000
 #define L2X0_CACHE_TYPE			0x004
@@ -100,6 +102,32 @@
 #define L2X0_CTRL_EN			1
 
 #define L2X0_WAY_SIZE_SHIFT		3
+
+struct outer_cache_fns {
+	void (*inv_range)(unsigned long, unsigned long);
+	void (*clean_range)(unsigned long, unsigned long);
+	void (*flush_range)(unsigned long, unsigned long);
+	void (*flush_all)(void);
+	void (*disable)(void);
+
+	void (*resume)(void);
+
+	/* This is an ARM L2C thing */
+	void (*write_sec)(unsigned long, unsigned);
+	void (*configure)(const struct l2x0_regs *);
+};
+
+struct l2c_init_data {
+	const char *type;
+	unsigned way_size_0;
+	unsigned num_lock;
+	void (*of_parse)(const struct device_node *, u32 *, u32 *);
+	void (*enable)(void __iomem *, u32, unsigned);
+	void (*fixup)(void __iomem *, u32, struct outer_cache_fns *);
+	void (*save)(void __iomem *);
+	void (*configure)(void __iomem *);
+	struct outer_cache_fns outer_cache;
+};
 
 extern const struct command_registration arm7a_l2x_cache_command_handler[];
 
