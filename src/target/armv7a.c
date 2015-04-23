@@ -854,13 +854,15 @@ const struct command_registration l2x_cache_command_handlers[] = {
 	COMMAND_REGISTRATION_DONE
 };
 
-
 const struct command_registration armv7a_command_handlers[] = {
 	{
 		.chain = dap_command_handlers,
 	},
 	{
 		.chain = l2x_cache_command_handlers,
+	},
+	{
+		.chain = arm7a_cache_command_handlers,
 	},
 	COMMAND_REGISTRATION_DONE
 };
