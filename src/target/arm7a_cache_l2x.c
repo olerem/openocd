@@ -58,6 +58,132 @@ static int arm7a_handle_l2x_cache_info_command(struct command_context *cmd_ctx,
 	return ERROR_OK;
 }
 
+static const struct l2c_init_data of_l2c310_data __initconst = {
+	.type = "L2C-310",
+	.way_size_0 = SZ_8K,
+	.num_lock = 8,
+
+	.enable = l2c310_enable,
+	.fixup = l2c310_fixup,
+	.save  = l2c310_save,
+	.configure = l2c310_configure,
+	.outer_cache = {
+		.inv_range   = l2c210_inv_range,
+		.clean_range = l2c210_clean_range,
+		.flush_range = l2c210_flush_range,
+		.flush_all   = l2c210_flush_all,
+		.disable     = l2c310_disable,
+		.sync        = l2c210_sync,
+		.resume      = l2c310_resume,
+	},
+};
+
+static const struct l2c_init_data of_l2c310_coherent_data __initconst = {
+	.type = "L2C-310 Coherent",
+	.way_size_0 = SZ_8K,
+	.num_lock = 8,
+
+	.enable = l2c310_enable,
+	.fixup = l2c310_fixup,
+	.save  = l2c310_save,
+	.configure = l2c310_configure,
+	.outer_cache = {
+		.inv_range   = l2c210_inv_range,
+		.clean_range = l2c210_clean_range,
+		.flush_range = l2c210_flush_range,
+		.flush_all   = l2c210_flush_all,
+		.disable     = l2c310_disable,
+		.resume      = l2c310_resume,
+	},
+};
+
+static const struct l2c_init_data of_aurora_with_outer_data __initconst = {
+	.type = "Aurora",
+	.way_size_0 = SZ_4K,
+	.num_lock = 4,
+
+	.enable = l2c_enable,
+	.fixup = aurora_fixup,
+	.save  = aurora_save,
+	.outer_cache = {
+		.inv_range   = aurora_inv_range,
+		.clean_range = aurora_clean_range,
+		.flush_range = aurora_flush_range,
+		.flush_all   = aurora_flush_all,
+		.disable     = aurora_disable,
+		.sync	     = aurora_cache_sync,
+		.resume      = l2c_resume,
+	},
+};
+
+static const struct l2c_init_data of_aurora_no_outer_data __initconst = {
+	.type = "Aurora",
+	.way_size_0 = SZ_4K,
+	.num_lock = 4,
+
+	.enable = aurora_enable_no_outer,
+	.fixup = aurora_fixup,
+	.save  = aurora_save,
+	.outer_cache = {
+		.resume      = l2c_resume,
+	},
+};
+
+static const struct l2c_init_data of_bcm_l2x0_data __initconst = {
+	.type = "BCM-L2C-310",
+	.way_size_0 = SZ_8K,
+	.num_lock = 8,
+
+	.enable = l2c310_enable,
+	.save  = l2c310_save,
+	.configure = l2c310_configure,
+	.outer_cache = {
+		.inv_range   = bcm_inv_range,
+		.clean_range = bcm_clean_range,
+		.flush_range = bcm_flush_range,
+		.flush_all   = l2c210_flush_all,
+		.disable     = l2c310_disable,
+		.sync        = l2c210_sync,
+		.resume      = l2c310_resume,
+	},
+};
+
+static const struct l2c_init_data of_l2c210_data = {
+	.type = "L2C-210",
+	.way_size_0 = SZ_8K,
+	.num_lock = 1,
+
+	.enable = l2c_enable,
+	.save = l2c_save,
+	.outer_cache = {
+		.inv_range   = l2c210_inv_range,
+		.clean_range = l2c210_clean_range,
+		.flush_range = l2c210_flush_range,
+		.flush_all   = l2c210_flush_all,
+		.disable     = l2c_disable,
+		.sync        = l2c210_sync,
+		.resume      = l2c_resume,
+	},
+};
+
+static const struct l2c_init_data of_l2c220_data = {
+	.type = "L2C-220",
+	.way_size_0 = SZ_8K,
+	.num_lock = 1,
+
+	.enable = l2c220_enable,
+	.save = l2c_save,
+	.outer_cache = {
+		.inv_range   = l2c220_inv_range,
+		.clean_range = l2c220_clean_range,
+		.flush_range = l2c220_flush_range,
+		.flush_all   = l2c220_flush_all,
+		.disable     = l2c_disable,
+		.sync        = l2c220_sync,
+		.resume      = l2c_resume,
+	},
+};
+
 COMMAND_HANDLER(arm7a_l2x_cache_info_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
