@@ -2847,16 +2847,6 @@ static int cortex_a_examine_first(struct target *target)
 		LOG_ERROR("Could not find APB-AP for debug access");
 		return retval;
 	}
-	/* Search for the AHB-AB */
-	retval = dap_find_ap(swjdp, AP_TYPE_AHB_AP, &armv7a->memory_ap);
-	if (retval != ERROR_OK) {
-		/* AHB-AP not found - use APB-AP */
-		LOG_DEBUG("Could not find AHB-AP - using APB-AP for memory access");
-		armv7a->memory_ap_available = false;
-	} else {
-		armv7a->memory_ap_available = true;
-	}
-
 
 	if (!target->dbgbase_set) {
 		uint32_t dbgbase;
