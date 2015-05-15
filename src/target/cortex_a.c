@@ -2574,7 +2574,7 @@ static int cortex_a_read_phys_memory(struct target *target,
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	int retval = ERROR_COMMAND_SYNTAX_ERROR;
-	uint8_t apsel = swjdp->apsel;
+
 	LOG_DEBUG("Reading memory at real address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32,
 		address, size, count);
 
@@ -2647,7 +2647,6 @@ static int cortex_a_write_phys_memory(struct target *target,
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct adiv5_dap *swjdp = armv7a->arm.dap;
 	int retval = ERROR_COMMAND_SYNTAX_ERROR;
-	uint8_t apsel = swjdp->apsel;
 
 	LOG_DEBUG("Writing memory to real address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address,
 		size, count);
