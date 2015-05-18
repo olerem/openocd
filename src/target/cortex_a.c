@@ -2622,7 +2622,6 @@ static int cortex_a_read_memory(struct target *target, uint32_t address,
 	return retval;
 }
 
-#if 0
 static int cortex_a_read_memory_ahb(struct target *target, uint32_t address,
 	uint32_t size, uint32_t count, uint8_t *buffer)
 {
@@ -2644,6 +2643,9 @@ static int cortex_a_read_memory_ahb(struct target *target, uint32_t address,
 			return retval;
 	}
 
+	if (!armv7a->memory_ap_available && (apsel =! armv7a->memory_ap))
+		return target_read_memory(target, address, size, size, buffer);
+
 	if (mmu_enabled) {
 		virt = address;
 		retval = cortex_a_virt2phys(target, virt, &phys);
@@ -2658,7 +2660,6 @@ static int cortex_a_read_memory_ahb(struct target *target, uint32_t address,
 		    count, buffer);
 	return retval;
 }
-#endif
 
 static int cortex_a_write_phys_memory(struct target *target,
 	uint32_t address, uint32_t size,
@@ -2715,7 +2716,6 @@ static int cortex_a_write_memory(struct target *target, uint32_t address,
 	return retval;
 }
 
-#if 0
 static int cortex_a_write_memory_ahb(struct target *target, uint32_t address,
 	uint32_t size, uint32_t count, const uint8_t *buffer)
 {
@@ -2737,6 +2737,9 @@ static int cortex_a_write_memory_ahb(struct target *target, uint32_t address,
 			return retval;
 	}
 
+	if (!armv7a->memory_ap_available && (apsel =! armv7a->memory_ap))
+		return target_write_memory(target, address, size, size, buffer);
+
 	LOG_DEBUG("Writing memory to address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address, size,
 		count);
 	if (mmu_enabled) {
@@ -2754,7 +2757,6 @@ static int cortex_a_write_memory_ahb(struct target *target, uint32_t address,
 			count, buffer);
 	return retval;
 }
-#endif
 
 static int cortex_a_read_buffer(struct target *target, uint32_t address,
 				uint32_t count, uint8_t *buffer)
@@ -2765,7 +2767,7 @@ static int cortex_a_read_buffer(struct target *target, uint32_t address,
 	 * will have something to do with the size we leave to it. */
 	for (size = 1; size < 4 && count >= size * 2 + (address & size); size *= 2) {
 		if (address & size) {
-			int retval = target_read_memory(target, address, size, 1, buffer);
+			int retval = cortex_a_read_memory_ahb(target, address, size, 1, buffer);
 			if (retval != ERROR_OK)
 				return retval;
 			address += size;
@@ -2778,7 +2780,7 @@ static int cortex_a_read_buffer(struct target *target, uint32_t address,
 	for (; size > 0; size /= 2) {
 		uint32_t aligned = count - count % size;
 		if (aligned > 0) {
-			int retval = target_read_memory(target, address, size, aligned / size, buffer);
+			int retval = cortex_a_read_memory_ahb(target, address, size, aligned / size, buffer);
 			if (retval != ERROR_OK)
 				return retval;
 			address += aligned;
@@ -2799,7 +2801,7 @@ static int cortex_a_write_buffer(struct target *target, uint32_t address,
 	 * will have something to do with the size we leave to it. */
 	for (size = 1; size < 4 && count >= size * 2 + (address & size); size *= 2) {
 		if (address & size) {
-			int retval = target_write_memory(target, address, size, 1, buffer);
+			int retval = cortex_a_write_memory_ahb(target, address, size, 1, buffer);
 			if (retval != ERROR_OK)
 				return retval;
 			address += size;
@@ -2812,7 +2814,7 @@ static int cortex_a_write_buffer(struct target *target, uint32_t address,
 	for (; size > 0; size /= 2) {
 		uint32_t aligned = count - count % size;
 		if (aligned > 0) {
-			int retval = target_write_memory(target, address, size, aligned / size, buffer);
+			int retval = cortex_a_write_memory_ahb(target, address, size, aligned / size, buffer);
 			if (retval != ERROR_OK)
 				return retval;
 			address += aligned;
