@@ -2594,6 +2594,39 @@ static int cortex_a_read_memory(struct target *target, uint32_t address,
 	uint32_t size, uint32_t count, uint8_t *buffer)
 {
 	int mmu_enabled = 0;
+	int retval;
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	/* cortex_a handles unaligned memory access */
+	LOG_DEBUG("Reading memory at address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address,
+		size, count);
+
+	/* determine if MMU was enabled on target stop */
+	if (!armv7a->is_armv7r) {
+		retval = cortex_a_mmu(target, &mmu_enabled);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
+	if (mmu_enabled) {
+		retval = cortex_a_check_address(target, address);
+		if (retval != ERROR_OK)
+			return retval;
+		/* enable MMU as we could have disabled it for phys access */
+		retval = cortex_a_mmu_modify(target, 1);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+	retval = cortex_a_read_apb_ab_memory(target, address, size, count, buffer);
+
+	return retval;
+}
+
+#if 0
+static int cortex_a_read_memory_ahb(struct target *target, uint32_t address,
+	uint32_t size, uint32_t count, uint8_t *buffer)
+{
+	int mmu_enabled = 0;
 	uint32_t virt, phys;
 	int retval;
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -2611,33 +2644,21 @@ static int cortex_a_read_memory(struct target *target, uint32_t address,
 			return retval;
 	}
 
-	if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
-		if (mmu_enabled) {
-			virt = address;
-			retval = cortex_a_virt2phys(target, virt, &phys);
-			if (retval != ERROR_OK)
-				return retval;
+	if (mmu_enabled) {
+		virt = address;
+		retval = cortex_a_virt2phys(target, virt, &phys);
+		if (retval != ERROR_OK)
+			return retval;
 
-			LOG_DEBUG("Reading at virtual address. Translating v:0x%" PRIx32 " to r:0x%" PRIx32,
-				  virt, phys);
-			address = phys;
-		}
-		retval = cortex_a_read_phys_memory(target, address, size,
-			    count, buffer);
-	} else {
-		if (mmu_enabled) {
-			retval = cortex_a_check_address(target, address);
-			if (retval != ERROR_OK)
-				return retval;
-			/* enable MMU as we could have disabled it for phys access */
-			retval = cortex_a_mmu_modify(target, 1);
-			if (retval != ERROR_OK)
-				return retval;
-		}
-		retval = cortex_a_read_apb_ab_memory(target, address, size, count, buffer);
+		LOG_DEBUG("Reading at virtual address. Translating v:0x%" PRIx32 " to r:0x%" PRIx32,
+			  virt, phys);
+		address = phys;
 	}
+	retval = cortex_a_read_phys_memory(target, address, size,
+		    count, buffer);
 	return retval;
 }
+#endif
 
 static int cortex_a_write_phys_memory(struct target *target,
 	uint32_t address, uint32_t size,
@@ -2666,6 +2687,39 @@ static int cortex_a_write_memory(struct target *target, uint32_t address,
 	uint32_t size, uint32_t count, const uint8_t *buffer)
 {
 	int mmu_enabled = 0;
+	int retval;
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	/* cortex_a handles unaligned memory access */
+	LOG_DEBUG("Writing memory at address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address,
+		size, count);
+
+	/* determine if MMU was enabled on target stop */
+	if (!armv7a->is_armv7r) {
+		retval = cortex_a_mmu(target, &mmu_enabled);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
+	if (mmu_enabled) {
+		retval = cortex_a_check_address(target, address);
+		if (retval != ERROR_OK)
+			return retval;
+		/* enable MMU as we could have disabled it for phys access */
+		retval = cortex_a_mmu_modify(target, 1);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+	retval = cortex_a_write_apb_ab_memory(target, address, size, count, buffer);
+
+	return retval;
+}
+
+#if 0
+static int cortex_a_write_memory_ahb(struct target *target, uint32_t address,
+	uint32_t size, uint32_t count, const uint8_t *buffer)
+{
+	int mmu_enabled = 0;
 	uint32_t virt, phys;
 	int retval;
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -2683,36 +2737,24 @@ static int cortex_a_write_memory(struct target *target, uint32_t address,
 			return retval;
 	}
 
-	if (armv7a->memory_ap_available && (apsel == armv7a->memory_ap)) {
-		LOG_DEBUG("Writing memory to address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address, size,
-			count);
-		if (mmu_enabled) {
-			virt = address;
-			retval = cortex_a_virt2phys(target, virt, &phys);
-			if (retval != ERROR_OK)
-				return retval;
+	LOG_DEBUG("Writing memory to address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address, size,
+		count);
+	if (mmu_enabled) {
+		virt = address;
+		retval = cortex_a_virt2phys(target, virt, &phys);
+		if (retval != ERROR_OK)
+			return retval;
 
-			LOG_DEBUG("Writing to virtual address. Translating v:0x%" PRIx32 " to r:0x%" PRIx32,
-				  virt,
-				  phys);
-			address = phys;
-		}
-		retval = cortex_a_write_phys_memory(target, address, size,
-				count, buffer);
-	} else {
-		if (mmu_enabled) {
-			retval = cortex_a_check_address(target, address);
-			if (retval != ERROR_OK)
-				return retval;
-			/* enable MMU as we could have disabled it for phys access */
-			retval = cortex_a_mmu_modify(target, 1);
-			if (retval != ERROR_OK)
-				return retval;
-		}
-		retval = cortex_a_write_apb_ab_memory(target, address, size, count, buffer);
+		LOG_DEBUG("Writing to virtual address. Translating v:0x%" PRIx32 " to r:0x%" PRIx32,
+			  virt,
+			  phys);
+		address = phys;
 	}
+	retval = cortex_a_write_phys_memory(target, address, size,
+			count, buffer);
 	return retval;
 }
+#endif
 
 static int cortex_a_read_buffer(struct target *target, uint32_t address,
 				uint32_t count, uint8_t *buffer)
