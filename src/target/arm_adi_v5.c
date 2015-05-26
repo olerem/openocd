@@ -423,7 +423,6 @@ int mem_ap_read(struct adiv5_dap *dap, uint8_t *buffer, uint32_t size, uint32_t 
 		uint32_t adr, bool addrinc)
 {
 	size_t nbytes = size * count;
-	const uint32_t csw_addrincr = addrinc ? CSW_ADDRINC_SINGLE : CSW_ADDRINC_OFF;
 	uint32_t csw_size;
 	uint32_t address = adr;
 	int retval;
@@ -475,7 +474,7 @@ int mem_ap_read(struct adiv5_dap *dap, uint8_t *buffer, uint32_t size, uint32_t 
 			this_size = 4;
 			retval = dap_setup_accessport_csw(dap, csw_size | CSW_ADDRINC_PACKED);
 		} else {
-			retval = dap_setup_accessport_csw(dap, csw_size | csw_addrincr);
+			retval = dap_setup_accessport_csw(dap, csw_size | CSW_ADDRINC_OFF);
 		}
 		if (retval != ERROR_OK)
 			break;
