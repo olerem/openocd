@@ -2637,6 +2637,7 @@ static int cortex_a_read_memory_ahb(struct target *target, uint32_t address,
 	if (!armv7a->memory_ap_available || (apsel =! armv7a->memory_ap))
 		return target_read_memory(target, address, size, count, buffer);
 
+	/* FIXME: we need proper testcase to make sure this path is working correctly */
 	/* cortex_a handles unaligned memory access */
 	LOG_DEBUG("Reading memory at address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address,
 		size, count);
@@ -2735,6 +2736,7 @@ static int cortex_a_write_memory_ahb(struct target *target, uint32_t address,
 	if (!armv7a->memory_ap_available || (apsel =! armv7a->memory_ap))
 		return target_write_memory(target, address, size, count, buffer);
 
+	/* FIXME: we need proper testcase to make sure this path is working correctly */
 	/* cortex_a handles unaligned memory access */
 	LOG_DEBUG("Writing memory at address 0x%" PRIx32 "; size %" PRId32 "; count %" PRId32, address,
 		size, count);
