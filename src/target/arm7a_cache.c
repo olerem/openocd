@@ -128,6 +128,7 @@ static int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
 		uint32_t offs = virt + i;
 
 		/* FIXME: do we need DCCVAC or DCCVAU */
+		/* FIXME: in both cases it is not enough for i-cache */
 		retval = dpm->instr_write_data_r0(dpm,
 				ARMV4_5_MCR(15, 0, 0, 7, 10, 1), offs);
 		if (retval != ERROR_OK)
@@ -137,6 +138,36 @@ static int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
 
 done:
 	LOG_ERROR("d-cache invalidate failed");
+	dpm->finish(dpm);
+
+	return retval;
+}
+
+static int armv7a_l1_i_cache_inval_all(struct target *target)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct arm_dpm *dpm = armv7a->arm.dpm;
+	int retval;
+
+	/*  check that cache data is on at target halt */
+	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
+		LOG_INFO("flushed not performed :cache not on at target halt");
+		return ERROR_OK;
+	}
+
+	retval = dpm->prepare(dpm);
+	if (retval != ERROR_OK)
+		goto done;
+
+	retval = dpm->instr_write_data_r0(dpm,
+			ARMV4_5_MCR(15, 0, 0, 7, 5, 0), 0);
+	if (retval != ERROR_OK)
+		goto done;
+
+	return retval;
+
+done:
+	LOG_ERROR("i-cache invalidate failed");
 	dpm->finish(dpm);
 
 	return retval;
@@ -235,6 +266,15 @@ COMMAND_HANDLER(arm7a_l1_d_cache_clean_virt_cmd)
 	return armv7a_l1_d_cache_clean_virt(target, virt, size);
 }
 
+COMMAND_HANDLER(armv7a_i_cache_clean_inval_all_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+
+	armv7a_l1_i_cache_inval_all(target);
+
+	return 0;
+}
+
 COMMAND_HANDLER(arm7a_l1_i_cache_inval_virt_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -281,7 +321,7 @@ static const struct command_registration arm7a_l1_d_cache_commands[] = {
 static const struct command_registration arm7a_l1_i_cache_commands[] = {
 	{
 		.name = "inval_all",
-		.handler = armv7a_d_cache_clean_inval_all_cmd,
+		.handler = armv7a_i_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
 		.help = "invalidate complete l1 i-cache",
 		.usage = "",
