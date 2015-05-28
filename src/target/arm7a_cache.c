@@ -196,7 +196,7 @@ COMMAND_HANDLER(arm7a_cache_clean_virt_command)
 	return armv7a_d_cache_clean_virt(target, virt, size);
 }
 
-static const struct command_registration arm7a_cache_commands[] = {
+static const struct command_registration arm7a_l1_d_cache_commands[] = {
 	{
 		.name = "info",
 		.handler = arm7a_cache_info_command,
@@ -225,6 +225,67 @@ static const struct command_registration arm7a_cache_commands[] = {
 		.help = "clean l1 by virtual address address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
+	COMMAND_REGISTRATION_DONE
+};
+
+static const struct command_registration arm7a_l1_i_cache_commands[] = {
+	{
+		.name = "info",
+		.handler = arm7a_cache_info_command,
+		.mode = COMMAND_ANY,
+		.help = "print cache realted information",
+		.usage = "",
+	},
+	{
+		.name = "flash_all",
+		.handler = arm7a_cache_flash_all_command,
+		.mode = COMMAND_ANY,
+		.help = "flash (clean and invalidate) all l1 caches",
+		.usage = "",
+	},
+	{
+		.name = "inval",
+		.handler = arm7a_cache_inval_virt_command,
+		.mode = COMMAND_ANY,
+		.help = "invalidate l1 by virtual address offset and range size",
+		.usage = "<virt_addr> [size]",
+	},
+	{
+		.name = "clean",
+		.handler = arm7a_cache_clean_virt_command,
+		.mode = COMMAND_ANY,
+		.help = "clean l1 by virtual address address offset and range size",
+		.usage = "<virt_addr> [size]",
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
+const struct command_registration arm7a_l1_di_cache_group_handlers[] = {
+	{
+		.name = "d",
+		.mode = COMMAND_ANY,
+		.help = "l1 d-cache command group",
+		.usage = "",
+		.chain = arm7a_l1_d_cache_commands,
+	},
+	{
+		.name = "i",
+		.mode = COMMAND_ANY,
+		.help = "l1 i-cache command group",
+		.usage = "",
+		.chain = arm7a_l1_i_cache_commands,
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
+const struct command_registration arm7a_cache_group_handlers[] = {
+	{
+		.name = "l1",
+		.mode = COMMAND_ANY,
+		.help = "l1 cache command group",
+		.usage = "",
+		.chain = arm7a_l1_di_cache_group_handlers,
+	},
 	{
 		.chain = arm7a_l2x_cache_command_handler,
 	},
@@ -237,7 +298,7 @@ const struct command_registration arm7a_cache_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.help = "cache command group",
 		.usage = "",
-		.chain = arm7a_cache_commands,
+		.chain = arm7a_cache_group_handlers,
 	},
 	COMMAND_REGISTRATION_DONE
 };
