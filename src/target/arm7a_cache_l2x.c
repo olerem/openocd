@@ -40,7 +40,7 @@ static int arm7a_l2x_flush_all_data(struct target *target)
 			4, 1, (uint8_t *)&l2_way_val);
 }
 
-static int armv7a_l2x_cache_flush_virt(struct target *target, uint32_t virt,
+int armv7a_l2x_cache_flush_virt(struct target *target, uint32_t virt,
 					uint32_t size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
