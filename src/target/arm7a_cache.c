@@ -69,7 +69,8 @@ done:
 	return retval;
 }
 
-static int armv7a_d_cache_inval_virt(struct target *target, uint32_t virt)
+static int armv7a_d_cache_inval_virt(struct target *target, uint32_t virt,
+					unsigned int size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct arm_dpm *dpm = armv7a->arm.dpm;
@@ -98,7 +99,8 @@ done:
 	return retval;
 }
 
-static int armv7a_d_cache_clean_virt(struct target *target, uint32_t virt)
+static int armv7a_d_cache_clean_virt(struct target *target, uint32_t virt,
+					unsigned int size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct arm_dpm *dpm = armv7a->arm.dpm;
@@ -149,27 +151,31 @@ COMMAND_HANDLER(arm7a_cache_flash_all_command)
 COMMAND_HANDLER(arm7a_cache_inval_virt_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
-	uint32_t virt;
+	uint32_t virt, size;
 
 	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
+	else if (CMD_ARGC == 2)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], size);
 
 	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
 
-	return armv7a_d_cache_inval_virt(target, virt);
+	return armv7a_d_cache_inval_virt(target, virt, size);
 }
 
 COMMAND_HANDLER(arm7a_cache_clean_virt_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
-	uint32_t virt;
+	uint32_t virt, size;
 
 	if (CMD_ARGC != 1)
 		return ERROR_COMMAND_SYNTAX_ERROR;
+	else if (CMD_ARGC == 2)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], size);
 
 	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
 
-	return armv7a_d_cache_clean_virt(target, virt);
+	return armv7a_d_cache_clean_virt(target, virt, size);
 }
 
 static const struct command_registration arm7a_cache_commands[] = {
@@ -191,15 +197,15 @@ static const struct command_registration arm7a_cache_commands[] = {
 		.name = "inval",
 		.handler = arm7a_cache_inval_virt_command,
 		.mode = COMMAND_ANY,
-		.help = "invalidate l1 by virtual address",
-		.usage = "[virt_addr]",
+		.help = "invalidate l1 by virtual address offset and range size",
+		.usage = "<virt_addr> [size]",
 	},
 	{
 		.name = "clean",
 		.handler = arm7a_cache_clean_virt_command,
 		.mode = COMMAND_ANY,
-		.help = "clean l1 by virtual address",
-		.usage = "[virt_addr]",
+		.help = "clean l1 by virtual address address offset and range size",
+		.usage = "<virt_addr> [size]",
 	},
 	{
 		.chain = arm7a_l2x_cache_command_handler,
