@@ -148,4 +148,7 @@ struct l2c_init_data {
 
 extern const struct command_registration arm7a_l2x_cache_command_handler[];
 
+int armv7a_l2x_cache_flush_virt(struct target *target, uint32_t virt,
+					uint32_t size);
+
 #endif
