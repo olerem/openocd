@@ -19,6 +19,10 @@
 #include "arm_jtag.h"
 #include "arm7a_cache_l2x.h"
 
+int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
+					unsigned int size);
+int armv7a_l1_i_cache_inval_all(struct target *target);
+
 extern const struct command_registration arm7a_cache_command_handlers[];
 
 #endif
