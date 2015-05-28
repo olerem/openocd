@@ -142,6 +142,44 @@ done:
 	return retval;
 }
 
+static int armv7a_l1_i_cache_inval_virt(struct target *target, uint32_t virt,
+					uint32_t size)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct arm_dpm *dpm = armv7a->arm.dpm;
+	struct armv7a_cache_common *armv7a_cache = &armv7a->armv7a_mmu.armv7a_cache;
+	uint32_t i, linelen = armv7a_cache->i_size.linelen;
+	int retval;
+
+	/*  check that cache data is on at target halt */
+	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
+		LOG_INFO("flushed not performed :cache not on at target halt");
+		return ERROR_OK;
+	}
+
+	retval = dpm->prepare(dpm);
+	if (retval != ERROR_OK)
+		goto done;
+
+	for (i = 0; i < size; i += linelen) {
+		uint32_t offs = virt + i;
+
+		/* ICIMVAU - Invalidate instruction cache by VA to PoU. */
+		retval = dpm->instr_write_data_r0(dpm,
+				ARMV4_5_MCR(15, 0, 0, 7, 5, 1), offs);
+		if (retval != ERROR_OK)
+			goto done;
+	}
+	return retval;
+
+done:
+	LOG_ERROR("i-cache invalidate failed");
+	dpm->finish(dpm);
+
+	return retval;
+}
+
+
 COMMAND_HANDLER(arm7a_l1_cache_info_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -196,6 +234,24 @@ COMMAND_HANDLER(arm7a_l1_d_cache_clean_virt_cmd)
 	return armv7a_l1_d_cache_clean_virt(target, virt, size);
 }
 
+COMMAND_HANDLER(arm7a_l1_i_cache_inval_virt_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	uint32_t virt, size;
+
+	if (CMD_ARGC == 0 || CMD_ARGC > 2)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	if (CMD_ARGC == 2)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], size);
+	else
+		size = 1;
+
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
+
+	return armv7a_l1_i_cache_inval_virt(target, virt, size);
+}
+
 static const struct command_registration arm7a_l1_d_cache_commands[] = {
 	{
 		.name = "info",
@@ -238,7 +294,7 @@ static const struct command_registration arm7a_l1_i_cache_commands[] = {
 	},
 	{
 		.name = "inval",
-		.handler = arm7a_l1_d_cache_inval_virt_cmd,
+		.handler = arm7a_l1_i_cache_inval_virt_cmd,
 		.mode = COMMAND_ANY,
 		.help = "invalidate l1 i-cache by virtual address offset and range size",
 		.usage = "<virt_addr> [size]",
