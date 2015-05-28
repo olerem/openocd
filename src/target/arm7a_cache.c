@@ -295,10 +295,10 @@ COMMAND_HANDLER(arm7a_l1_i_cache_inval_virt_cmd)
 
 static const struct command_registration arm7a_l1_d_cache_commands[] = {
 	{
-		.name = "flash_all",
+		.name = "flush_all",
 		.handler = armv7a_d_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
-		.help = "flash (clean and invalidate) complete l1 d-cache",
+		.help = "flush (clean and invalidate) complete l1 d-cache",
 		.usage = "",
 	},
 	{
