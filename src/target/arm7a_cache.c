@@ -165,6 +165,7 @@ static int armv7a_l1_i_cache_inval_virt(struct target *target, uint32_t virt,
 		uint32_t offs = virt + i;
 
 		/* ICIMVAU - Invalidate instruction cache by VA to PoU. */
+		/* FIXME: is this instruction enough? */
 		retval = dpm->instr_write_data_r0(dpm,
 				ARMV4_5_MCR(15, 0, 0, 7, 5, 1), offs);
 		if (retval != ERROR_OK)
@@ -253,13 +254,6 @@ COMMAND_HANDLER(arm7a_l1_i_cache_inval_virt_cmd)
 }
 
 static const struct command_registration arm7a_l1_d_cache_commands[] = {
-	{
-		.name = "info",
-		.handler = arm7a_l1_cache_info_cmd,
-		.mode = COMMAND_ANY,
-		.help = "print cache realted information",
-		.usage = "",
-	},
 	{
 		.name = "flash_all",
 		.handler = armv7a_d_cache_clean_inval_all_cmd,
