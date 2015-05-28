@@ -40,6 +40,99 @@ static int arm7a_l2x_flush_all_data(struct target *target)
 			4, 1, (uint8_t *)&l2_way_val);
 }
 
+static int armv7a_l2x_cache_flash_virt(struct target *target, uint32_t virt,
+					uint32_t size)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
+		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
+	/* FIXME: different controllers have different linelen */
+	uint32_t i, linelen = 1024 * 8;
+	int retval;
+
+	for (i = 0; i < size; i += linelen) {
+		uint32_t pa, offs = virt + i;
+
+		retval = target->type->virt2phys(target, offs, &pa);
+		if (retval != ERROR_OK)
+			goto done;
+
+		retval = target_write_phys_memory(target,
+				l2x_cache->base + L2X0_CLEAN_INV_LINE_PA,
+				4, 1, (uint8_t *)&pa);
+		if (retval != ERROR_OK)
+			goto done;
+	}
+	return retval;
+
+done:
+	LOG_ERROR("d-cache invalidate failed");
+
+	return retval;
+}
+
+static int armv7a_l2x_cache_inval_virt(struct target *target, uint32_t virt,
+					uint32_t size)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
+		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
+	/* FIXME: different controllers have different linelen */
+	uint32_t i, linelen = 1024 * 8;
+	int retval;
+
+	for (i = 0; i < size; i += linelen) {
+		uint32_t pa, offs = virt + i;
+
+		retval = target->type->virt2phys(target, offs, &pa);
+		if (retval != ERROR_OK)
+			goto done;
+
+		retval = target_write_phys_memory(target,
+				l2x_cache->base + L2X0_INV_LINE_PA,
+				4, 1, (uint8_t *)&pa);
+		if (retval != ERROR_OK)
+			goto done;
+	}
+	return retval;
+
+done:
+	LOG_ERROR("d-cache invalidate failed");
+
+	return retval;
+}
+
+static int armv7a_l2x_cache_clean_virt(struct target *target, uint32_t virt,
+					unsigned int size)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
+		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
+	/* FIXME: different controllers have different linelen */
+	uint32_t i, linelen = 1024 * 8;
+	int retval;
+
+	for (i = 0; i < size; i += linelen) {
+		uint32_t pa, offs = virt + i;
+
+		retval = target->type->virt2phys(target, offs, &pa);
+		if (retval != ERROR_OK)
+			goto done;
+
+		retval = target_write_phys_memory(target,
+				l2x_cache->base + L2X0_CLEAN_LINE_PA,
+				4, 1, (uint8_t *)&pa);
+		if (retval != ERROR_OK)
+			goto done;
+	}
+	return retval;
+
+done:
+	LOG_ERROR("d-cache invalidate failed");
+
+	return retval;
+}
+
 static int arm7a_handle_l2x_cache_info_command(struct command_context *cmd_ctx,
 	struct armv7a_cache_common *armv7a_cache)
 {
@@ -202,6 +295,60 @@ COMMAND_HANDLER(arm7a_l2x_cache_flash_all_command)
 	return arm7a_l2x_flush_all_data(target);
 }
 
+COMMAND_HANDLER(arm7a_l2x_cache_flash_virt_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	uint32_t virt, size;
+
+	if (CMD_ARGC == 0 || CMD_ARGC > 2)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	if (CMD_ARGC == 2)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], size);
+	else
+		size = 1;
+
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
+
+	return armv7a_l2x_cache_flash_virt(target, virt, size);
+}
+
+COMMAND_HANDLER(arm7a_l2x_cache_inval_virt_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	uint32_t virt, size;
+
+	if (CMD_ARGC == 0 || CMD_ARGC > 2)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	if (CMD_ARGC == 2)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], size);
+	else
+		size = 1;
+
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
+
+	return armv7a_l2x_cache_inval_virt(target, virt, size);
+}
+
+COMMAND_HANDLER(arm7a_l2x_cache_clean_virt_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	uint32_t virt, size;
+
+	if (CMD_ARGC == 0 || CMD_ARGC > 2)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	if (CMD_ARGC == 2)
+		COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], size);
+	else
+		size = 1;
+
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
+
+	return armv7a_l2x_cache_clean_virt(target, virt, size);
+}
+
 static const struct command_registration arm7a_l2x_cache_commands[] = {
 	{
 		.name = "info",
@@ -216,6 +363,27 @@ static const struct command_registration arm7a_l2x_cache_commands[] = {
 		.mode = COMMAND_ANY,
 		.help = "flash complete l2x cache",
 		.usage = "",
+	},
+	{
+		.name = "flash",
+		.handler = arm7a_l2x_cache_flash_virt_cmd,
+		.mode = COMMAND_ANY,
+		.help = "flash (clean and invalidate) l2x cache by virtual address offset and range size",
+		.usage = "<virt_addr> [size]",
+	},
+	{
+		.name = "inval",
+		.handler = arm7a_l2x_cache_inval_virt_cmd,
+		.mode = COMMAND_ANY,
+		.help = "invalidate l2x cache by virtual address offset and range size",
+		.usage = "<virt_addr> [size]",
+	},
+	{
+		.name = "clean",
+		.handler = arm7a_l2x_cache_clean_virt_cmd,
+		.mode = COMMAND_ANY,
+		.help = "clean l2x cache by virtual address address offset and range size",
+		.usage = "<virt_addr> [size]",
 	},
 	COMMAND_REGISTRATION_DONE
 };
