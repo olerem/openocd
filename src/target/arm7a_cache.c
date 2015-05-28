@@ -69,7 +69,7 @@ done:
 	return retval;
 }
 
-static int armv7a_d_cache_inval_virt(struct target *target, uint32_t virt,
+static int armv7a_l1_d_cache_inval_virt(struct target *target, uint32_t virt,
 					uint32_t size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -105,7 +105,7 @@ done:
 	return retval;
 }
 
-static int armv7a_d_cache_clean_virt(struct target *target, uint32_t virt,
+static int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
 					unsigned int size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -142,7 +142,7 @@ done:
 	return retval;
 }
 
-COMMAND_HANDLER(arm7a_cache_info_command)
+COMMAND_HANDLER(arm7a_l1_cache_info_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -151,7 +151,7 @@ COMMAND_HANDLER(arm7a_cache_info_command)
 			&armv7a->armv7a_mmu.armv7a_cache);
 }
 
-COMMAND_HANDLER(arm7a_cache_flash_all_command)
+COMMAND_HANDLER(armv7a_d_cache_clean_inval_all_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
 
@@ -160,7 +160,7 @@ COMMAND_HANDLER(arm7a_cache_flash_all_command)
 	return 0;
 }
 
-COMMAND_HANDLER(arm7a_cache_inval_virt_command)
+COMMAND_HANDLER(arm7a_l1_d_cache_inval_virt_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	uint32_t virt, size;
@@ -175,10 +175,10 @@ COMMAND_HANDLER(arm7a_cache_inval_virt_command)
 
 	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
 
-	return armv7a_d_cache_inval_virt(target, virt, size);
+	return armv7a_l1_d_cache_inval_virt(target, virt, size);
 }
 
-COMMAND_HANDLER(arm7a_cache_clean_virt_command)
+COMMAND_HANDLER(arm7a_l1_d_cache_clean_virt_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	uint32_t virt, size;
@@ -193,34 +193,34 @@ COMMAND_HANDLER(arm7a_cache_clean_virt_command)
 
 	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
 
-	return armv7a_d_cache_clean_virt(target, virt, size);
+	return armv7a_l1_d_cache_clean_virt(target, virt, size);
 }
 
 static const struct command_registration arm7a_l1_d_cache_commands[] = {
 	{
 		.name = "info",
-		.handler = arm7a_cache_info_command,
+		.handler = arm7a_l1_cache_info_cmd,
 		.mode = COMMAND_ANY,
 		.help = "print cache realted information",
 		.usage = "",
 	},
 	{
 		.name = "flash_all",
-		.handler = arm7a_cache_flash_all_command,
+		.handler = armv7a_d_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
 		.help = "flash (clean and invalidate) all l1 caches",
 		.usage = "",
 	},
 	{
 		.name = "inval",
-		.handler = arm7a_cache_inval_virt_command,
+		.handler = arm7a_l1_d_cache_inval_virt_cmd,
 		.mode = COMMAND_ANY,
 		.help = "invalidate l1 by virtual address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
 	{
 		.name = "clean",
-		.handler = arm7a_cache_clean_virt_command,
+		.handler = arm7a_l1_d_cache_clean_virt_cmd,
 		.mode = COMMAND_ANY,
 		.help = "clean l1 by virtual address address offset and range size",
 		.usage = "<virt_addr> [size]",
@@ -230,29 +230,22 @@ static const struct command_registration arm7a_l1_d_cache_commands[] = {
 
 static const struct command_registration arm7a_l1_i_cache_commands[] = {
 	{
-		.name = "info",
-		.handler = arm7a_cache_info_command,
-		.mode = COMMAND_ANY,
-		.help = "print cache realted information",
-		.usage = "",
-	},
-	{
 		.name = "flash_all",
-		.handler = arm7a_cache_flash_all_command,
+		.handler = armv7a_d_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
 		.help = "flash (clean and invalidate) all l1 caches",
 		.usage = "",
 	},
 	{
 		.name = "inval",
-		.handler = arm7a_cache_inval_virt_command,
+		.handler = arm7a_l1_d_cache_inval_virt_cmd,
 		.mode = COMMAND_ANY,
 		.help = "invalidate l1 by virtual address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
 	{
 		.name = "clean",
-		.handler = arm7a_cache_clean_virt_command,
+		.handler = arm7a_l1_d_cache_clean_virt_cmd,
 		.mode = COMMAND_ANY,
 		.help = "clean l1 by virtual address address offset and range size",
 		.usage = "<virt_addr> [size]",
@@ -261,6 +254,13 @@ static const struct command_registration arm7a_l1_i_cache_commands[] = {
 };
 
 const struct command_registration arm7a_l1_di_cache_group_handlers[] = {
+	{
+		.name = "info",
+		.handler = arm7a_l1_cache_info_cmd,
+		.mode = COMMAND_ANY,
+		.help = "print cache realted information",
+		.usage = "",
+	},
 	{
 		.name = "d",
 		.mode = COMMAND_ANY,
