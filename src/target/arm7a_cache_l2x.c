@@ -40,7 +40,7 @@ static int arm7a_l2x_flush_all_data(struct target *target)
 			4, 1, (uint8_t *)&l2_way_val);
 }
 
-static int armv7a_l2x_cache_flash_virt(struct target *target, uint32_t virt,
+static int armv7a_l2x_cache_flush_virt(struct target *target, uint32_t virt,
 					uint32_t size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -288,14 +288,14 @@ COMMAND_HANDLER(arm7a_l2x_cache_info_command)
 			&armv7a->armv7a_mmu.armv7a_cache);
 }
 
-COMMAND_HANDLER(arm7a_l2x_cache_flash_all_command)
+COMMAND_HANDLER(arm7a_l2x_cache_flush_all_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
 
 	return arm7a_l2x_flush_all_data(target);
 }
 
-COMMAND_HANDLER(arm7a_l2x_cache_flash_virt_cmd)
+COMMAND_HANDLER(arm7a_l2x_cache_flush_virt_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	uint32_t virt, size;
@@ -310,7 +310,7 @@ COMMAND_HANDLER(arm7a_l2x_cache_flash_virt_cmd)
 
 	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], virt);
 
-	return armv7a_l2x_cache_flash_virt(target, virt, size);
+	return armv7a_l2x_cache_flush_virt(target, virt, size);
 }
 
 COMMAND_HANDLER(arm7a_l2x_cache_inval_virt_cmd)
@@ -358,17 +358,17 @@ static const struct command_registration arm7a_l2x_cache_commands[] = {
 		.usage = "",
 	},
 	{
-		.name = "flash_all",
-		.handler = arm7a_l2x_cache_flash_all_command,
+		.name = "flush_all",
+		.handler = arm7a_l2x_cache_flush_all_command,
 		.mode = COMMAND_ANY,
-		.help = "flash complete l2x cache",
+		.help = "flush complete l2x cache",
 		.usage = "",
 	},
 	{
-		.name = "flash",
-		.handler = arm7a_l2x_cache_flash_virt_cmd,
+		.name = "flush",
+		.handler = arm7a_l2x_cache_flush_virt_cmd,
 		.mode = COMMAND_ANY,
-		.help = "flash (clean and invalidate) l2x cache by virtual address offset and range size",
+		.help = "flush (clean and invalidate) l2x cache by virtual address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
 	{
