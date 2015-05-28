@@ -48,8 +48,7 @@ static int armv7a_d_cache_clean_inval_all(struct target *target)
 		do {
 			uint32_t value = (c_index << d_u_size->index_shift)
 				| (c_way << d_u_size->way_shift);
-			/*  DCCISW */
-			/* LOG_INFO ("%d %d %x",c_way,c_index,value); */
+			/*  DCCISW - Clean and invalidate data cache line by Set/Way. */
 			retval = dpm->instr_write_data_r0(dpm,
 					ARMV4_5_MCR(15, 0, 0, 7, 14, 2),
 					value);
@@ -91,6 +90,7 @@ static int armv7a_l1_d_cache_inval_virt(struct target *target, uint32_t virt,
 	for (i = 0; i < size; i += linelen) {
 		uint32_t offs = virt + i;
 
+		/* DCIMVAC - Clean and invalidate data cache line by VA to PoC. */
 		retval = dpm->instr_write_data_r0(dpm,
 				ARMV4_5_MCR(15, 0, 0, 7, 6, 1), offs);
 		if (retval != ERROR_OK)
@@ -208,21 +208,21 @@ static const struct command_registration arm7a_l1_d_cache_commands[] = {
 		.name = "flash_all",
 		.handler = armv7a_d_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
-		.help = "flash (clean and invalidate) all l1 caches",
+		.help = "flash (clean and invalidate) complete l1 d-cache",
 		.usage = "",
 	},
 	{
 		.name = "inval",
 		.handler = arm7a_l1_d_cache_inval_virt_cmd,
 		.mode = COMMAND_ANY,
-		.help = "invalidate l1 by virtual address offset and range size",
+		.help = "invalidate l1 d-cache by virtual address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
 	{
 		.name = "clean",
 		.handler = arm7a_l1_d_cache_clean_virt_cmd,
 		.mode = COMMAND_ANY,
-		.help = "clean l1 by virtual address address offset and range size",
+		.help = "clean l1 d-cache by virtual address address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
 	COMMAND_REGISTRATION_DONE
@@ -230,24 +230,17 @@ static const struct command_registration arm7a_l1_d_cache_commands[] = {
 
 static const struct command_registration arm7a_l1_i_cache_commands[] = {
 	{
-		.name = "flash_all",
+		.name = "inval_all",
 		.handler = armv7a_d_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
-		.help = "flash (clean and invalidate) all l1 caches",
+		.help = "invalidate complete l1 i-cache",
 		.usage = "",
 	},
 	{
 		.name = "inval",
 		.handler = arm7a_l1_d_cache_inval_virt_cmd,
 		.mode = COMMAND_ANY,
-		.help = "invalidate l1 by virtual address offset and range size",
-		.usage = "<virt_addr> [size]",
-	},
-	{
-		.name = "clean",
-		.handler = arm7a_l1_d_cache_clean_virt_cmd,
-		.mode = COMMAND_ANY,
-		.help = "clean l1 by virtual address address offset and range size",
+		.help = "invalidate l1 i-cache by virtual address offset and range size",
 		.usage = "<virt_addr> [size]",
 	},
 	COMMAND_REGISTRATION_DONE
