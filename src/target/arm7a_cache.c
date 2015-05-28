@@ -105,7 +105,7 @@ done:
 	return retval;
 }
 
-static int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
+int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
 					unsigned int size)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
@@ -143,7 +143,7 @@ done:
 	return retval;
 }
 
-static int armv7a_l1_i_cache_inval_all(struct target *target)
+int armv7a_l1_i_cache_inval_all(struct target *target)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct arm_dpm *dpm = armv7a->arm.dpm;
