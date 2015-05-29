@@ -2190,12 +2190,6 @@ static int cortex_a_write_apb_ab_memory(struct target *target,
 		retval = cortex_a_write_apb_ab_memory_slow(target, size, count, buffer, &dscr);
 	}
 
-	if (0) {
-		armv7a_l1_d_cache_clean_virt(target, address, size * count);
-//		armv7a_l2x_cache_flush_virt(target, address, size * count);
-		armv7a_l1_i_cache_inval_all(target);
-	}
-
 out:
 	final_retval = retval;
 
@@ -2725,6 +2719,11 @@ static int cortex_a_write_memory(struct target *target, uint32_t address,
 			return retval;
 	}
 	retval = cortex_a_write_apb_ab_memory(target, address, size, count, buffer);
+	if (1) {
+		armv7a_l1_d_cache_clean_virt(target, address, size * count);
+		armv7a_l2x_cache_flush_virt(target, address, size * count);
+		armv7a_l1_i_cache_inval_all(target);
+	}
 
 	return retval;
 }
