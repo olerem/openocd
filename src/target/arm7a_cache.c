@@ -212,6 +212,42 @@ done:
 }
 
 
+int armv7a_cache_auto_flash_on_write(struct target *target, uint32_t virt,
+					uint32_t size)
+{
+	int retval;
+
+	armv7a_l1_d_cache_clean_virt(target, virt, size);
+	armv7a_l2x_cache_flush_virt(target, virt, size);
+
+	if (target->smp) {
+		struct target_list *head;
+		struct target *curr;
+		head = target->head;
+		while (head != (struct target_list *)NULL) {
+			curr = head->target;
+			if (curr->state == TARGET_HALTED) {
+				retval = armv7a_l1_i_cache_inval_all(curr);
+				if (retval != ERROR_OK)
+					return retval;
+				retval = armv7a_l1_d_cache_inval_virt(target, virt, size);
+				if (retval != ERROR_OK)
+					return retval;
+			}
+			head = head->next;
+		}
+	} else {
+		retval = armv7a_l1_i_cache_inval_all(target);
+		if (retval != ERROR_OK)
+			return retval;
+		retval = armv7a_l1_d_cache_inval_virt(target, virt, size);
+		if (retval != ERROR_OK)
+			return retval;
+	}
+
+	return retval;
+}
+
 COMMAND_HANDLER(arm7a_l1_cache_info_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
