@@ -31,6 +31,11 @@ static int arm7a_l2x_sanity_check(struct target *target)
 	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
 		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
 
+	if (target->state != TARGET_HALTED) {
+		LOG_ERROR("%s: target not halted", __func__);
+		return ERROR_TARGET_INVALID;
+	}
+
 	if (!l2x_cache || !l2x_cache->base) {
 		LOG_ERROR("l2x is not configured!");
 		return ERROR_FAIL;
