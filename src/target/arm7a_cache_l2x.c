@@ -25,6 +25,19 @@
 #include "target.h"
 #include "target_type.h"
 
+static int arm7a_l2x_sanity_check(struct target *target)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
+		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
+
+	if (!l2x_cache || !l2x_cache->base) {
+		LOG_ERROR("l2x is not configured!");
+		return ERROR_FAIL;
+	}
+
+	return ERROR_OK;
+}
 /*
  * clean and invalidate complete l2x cache
  */
@@ -34,6 +47,11 @@ static int arm7a_l2x_flush_all_data(struct target *target)
 	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
 		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
 	uint32_t l2_way_val = (1 << l2x_cache->way) - 1;
+	int retval;
+
+	retval = arm7a_l2x_sanity_check(target);
+	if (retval)
+		return retval;
 
 	return target_write_phys_memory(target,
 			l2x_cache->base + L2X0_CLEAN_INV_WAY,
@@ -49,6 +67,10 @@ int armv7a_l2x_cache_flush_virt(struct target *target, uint32_t virt,
 	/* FIXME: different controllers have different linelen */
 	uint32_t i, linelen = 1024 * 8;
 	int retval;
+
+	retval = arm7a_l2x_sanity_check(target);
+	if (retval)
+		return retval;
 
 	for (i = 0; i < size; i += linelen) {
 		uint32_t pa, offs = virt + i;
@@ -81,6 +103,10 @@ static int armv7a_l2x_cache_inval_virt(struct target *target, uint32_t virt,
 	uint32_t i, linelen = 1024 * 8;
 	int retval;
 
+	retval = arm7a_l2x_sanity_check(target);
+	if (retval)
+		return retval;
+
 	for (i = 0; i < size; i += linelen) {
 		uint32_t pa, offs = virt + i;
 
@@ -111,6 +137,10 @@ static int armv7a_l2x_cache_clean_virt(struct target *target, uint32_t virt,
 	/* FIXME: different controllers have different linelen */
 	uint32_t i, linelen = 1024 * 8;
 	int retval;
+
+	retval = arm7a_l2x_sanity_check(target);
+	if (retval)
+		return retval;
 
 	for (i = 0; i < size; i += linelen) {
 		uint32_t pa, offs = virt + i;
