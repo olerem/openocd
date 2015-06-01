@@ -33,7 +33,7 @@ static int arm7a_l2x_sanity_check(struct target *target)
 
 	if (target->state != TARGET_HALTED) {
 		LOG_ERROR("%s: target not halted", __func__);
-		return ERROR_TARGET_INVALID;
+		return ERROR_TARGET_NOT_HALTED;
 	}
 
 	if (!l2x_cache || !l2x_cache->base) {
