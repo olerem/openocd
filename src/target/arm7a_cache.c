@@ -178,7 +178,8 @@ static int armv7a_l1_i_cache_inval_virt(struct target *target, uint32_t virt,
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct arm_dpm *dpm = armv7a->arm.dpm;
-	struct armv7a_cache_common *armv7a_cache = &armv7a->armv7a_mmu.armv7a_cache;
+	struct armv7a_cache_common *armv7a_cache =
+				&armv7a->armv7a_mmu.armv7a_cache;
 	uint32_t i, linelen = armv7a_cache->i_size.linelen;
 	int retval;
 
@@ -212,6 +213,16 @@ done:
 }
 
 
+/*
+ * We assume that target core was chosen correctly. It means if same data
+ * was handled by two cores, other core will loose the changes. Since it
+ * is impossible to know (FIXME) which core has correct data, keep in mind
+ * that some kind of data lost or korruption is possible.
+ * Possible scenario:
+ *  - core1 loaded and changed data on 0x12345678
+ *  - we halted target and modified same data on core0
+ *  - data on core1 will be lost.
+ */
 int armv7a_cache_auto_flash_on_write(struct target *target, uint32_t virt,
 					uint32_t size)
 {
@@ -230,7 +241,8 @@ int armv7a_cache_auto_flash_on_write(struct target *target, uint32_t virt,
 				retval = armv7a_l1_i_cache_inval_all(curr);
 				if (retval != ERROR_OK)
 					return retval;
-				retval = armv7a_l1_d_cache_inval_virt(target, virt, size);
+				retval = armv7a_l1_d_cache_inval_virt(target,
+						virt, size);
 				if (retval != ERROR_OK)
 					return retval;
 			}
