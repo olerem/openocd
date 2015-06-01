@@ -24,7 +24,43 @@
 #include <helper/time_support.h>
 #include "arm_opcodes.h"
 
-static int armv7a_d_cache_clean_inval_all(struct target *target)
+static int armv7a_l1_d_cache_sanity_check(struct target *target)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (target->state != TARGET_HALTED) {
+		LOG_ERROR("%s: target not halted", __func__);
+		return ERROR_TARGET_NOT_HALTED;
+	}
+
+	/*  check that cache data is on at target halt */
+	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
+		LOG_INFO("l1 data cache is not enabled");
+		return ERROR_TARGET_INVALID;
+	}
+
+	return ERROR_OK;
+}
+
+static int armv7a_l1_i_cache_sanity_check(struct target *target)
+{
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (target->state != TARGET_HALTED) {
+		LOG_ERROR("%s: target not halted", __func__);
+		return ERROR_TARGET_NOT_HALTED;
+	}
+
+	/*  check that cache data is on at target halt */
+	if (!armv7a->armv7a_mmu.armv7a_cache.i_cache_enabled) {
+		LOG_INFO("l1 data cache is not enabled");
+		return ERROR_TARGET_INVALID;
+	}
+
+	return ERROR_OK;
+}
+
+static int armv7a_l1_d_cache_clean_inval_all(struct target *target)
 {
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct arm_dpm *dpm = armv7a->arm.dpm;
@@ -33,11 +69,9 @@ static int armv7a_d_cache_clean_inval_all(struct target *target)
 	int32_t c_way, c_index = d_u_size->index;
 	int retval;
 
-	/*  check that cache data is on at target halt */
-	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
-		LOG_INFO("flushed not performed :cache not on at target halt");
-		return ERROR_OK;
-	}
+	retval = armv7a_l1_d_cache_sanity_check(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	retval = dpm->prepare(dpm);
 	if (retval != ERROR_OK)
@@ -48,7 +82,10 @@ static int armv7a_d_cache_clean_inval_all(struct target *target)
 		do {
 			uint32_t value = (c_index << d_u_size->index_shift)
 				| (c_way << d_u_size->way_shift);
-			/*  DCCISW - Clean and invalidate data cache line by Set/Way. */
+			/*
+			 * DCCISW - Clean and invalidate data cache
+			 * line by Set/Way.
+			 */
 			retval = dpm->instr_write_data_r0(dpm,
 					ARMV4_5_MCR(15, 0, 0, 7, 14, 2),
 					value);
@@ -77,11 +114,9 @@ static int armv7a_l1_d_cache_inval_virt(struct target *target, uint32_t virt,
 	uint32_t i, linelen = armv7a_cache->d_u_size.linelen;
 	int retval;
 
-	/*  check that cache data is on at target halt */
-	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
-		LOG_INFO("flushed not performed :cache not on at target halt");
-		return ERROR_OK;
-	}
+	retval = armv7a_l1_d_cache_sanity_check(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	retval = dpm->prepare(dpm);
 	if (retval != ERROR_OK)
@@ -114,11 +149,9 @@ int armv7a_l1_d_cache_clean_virt(struct target *target, uint32_t virt,
 	uint32_t i, linelen = armv7a_cache->d_u_size.linelen;
 	int retval;
 
-	/*  check that cache data is on at target halt */
-	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
-		LOG_INFO("flushed not performed :cache not on at target halt");
-		return ERROR_OK;
-	}
+	retval = armv7a_l1_d_cache_sanity_check(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	retval = dpm->prepare(dpm);
 	if (retval != ERROR_OK)
@@ -149,11 +182,9 @@ int armv7a_l1_i_cache_inval_all(struct target *target)
 	struct arm_dpm *dpm = armv7a->arm.dpm;
 	int retval;
 
-	/*  check that cache data is on at target halt */
-	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
-		LOG_INFO("flushed not performed :cache not on at target halt");
-		return ERROR_OK;
-	}
+	retval = armv7a_l1_i_cache_sanity_check(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	retval = dpm->prepare(dpm);
 	if (retval != ERROR_OK)
@@ -183,11 +214,9 @@ static int armv7a_l1_i_cache_inval_virt(struct target *target, uint32_t virt,
 	uint32_t i, linelen = armv7a_cache->i_size.linelen;
 	int retval;
 
-	/*  check that cache data is on at target halt */
-	if (!armv7a->armv7a_mmu.armv7a_cache.d_u_cache_enabled) {
-		LOG_INFO("flushed not performed :cache not on at target halt");
-		return ERROR_OK;
-	}
+	retval = armv7a_l1_i_cache_sanity_check(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	retval = dpm->prepare(dpm);
 	if (retval != ERROR_OK)
@@ -269,11 +298,11 @@ COMMAND_HANDLER(arm7a_l1_cache_info_cmd)
 			&armv7a->armv7a_mmu.armv7a_cache);
 }
 
-COMMAND_HANDLER(armv7a_d_cache_clean_inval_all_cmd)
+COMMAND_HANDLER(armv7a_l1_d_cache_clean_inval_all_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
 
-	armv7a_d_cache_clean_inval_all(target);
+	armv7a_l1_d_cache_clean_inval_all(target);
 
 	return 0;
 }
@@ -344,7 +373,7 @@ COMMAND_HANDLER(arm7a_l1_i_cache_inval_virt_cmd)
 static const struct command_registration arm7a_l1_d_cache_commands[] = {
 	{
 		.name = "flush_all",
-		.handler = armv7a_d_cache_clean_inval_all_cmd,
+		.handler = armv7a_l1_d_cache_clean_inval_all_cmd,
 		.mode = COMMAND_ANY,
 		.help = "flush (clean and invalidate) complete l1 d-cache",
 		.usage = "",
