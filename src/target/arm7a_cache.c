@@ -255,7 +255,11 @@ done:
 int armv7a_cache_auto_flash_on_write(struct target *target, uint32_t virt,
 					uint32_t size)
 {
+	struct armv7a_common *armv7a = target_to_armv7a(target);
 	int retval;
+
+	if (!armv7a->armv7a_mmu.armv7a_cache.auto_cache_enabled)
+		return ERROR_OK;
 
 	armv7a_l1_d_cache_clean_virt(target, virt, size);
 	armv7a_l2x_cache_flush_virt(target, virt, size);
@@ -370,6 +374,28 @@ COMMAND_HANDLER(arm7a_l1_i_cache_inval_virt_cmd)
 	return armv7a_l1_i_cache_inval_virt(target, virt, size);
 }
 
+COMMAND_HANDLER(arm7a_cache_disable_auto_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (CMD_ARGC == 0) {
+		command_print(CMD_CTX, "auto cache is %s",
+			armv7a->armv7a_mmu.armv7a_cache.auto_cache_enabled ? "enabled" : "disabled");
+		return ERROR_OK;
+	}
+
+	if (CMD_ARGC == 1) {
+		uint32_t set;
+
+		COMMAND_PARSE_ENABLE(CMD_ARGV[0], set);
+		armv7a->armv7a_mmu.armv7a_cache.auto_cache_enabled = !!set;
+		return ERROR_OK;
+	}
+
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
 static const struct command_registration arm7a_l1_d_cache_commands[] = {
 	{
 		.name = "flush_all",
@@ -439,6 +465,13 @@ const struct command_registration arm7a_l1_di_cache_group_handlers[] = {
 };
 
 const struct command_registration arm7a_cache_group_handlers[] = {
+	{
+		.name = "auto",
+		.handler = arm7a_cache_disable_auto_cmd,
+		.mode = COMMAND_ANY,
+		.help = "disable or enable automatic cache handling.",
+		.usage = "(1|0)",
+	},
 	{
 		.name = "l1",
 		.mode = COMMAND_ANY,
