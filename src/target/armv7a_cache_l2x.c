@@ -20,7 +20,7 @@
 #include "jtag/interface.h"
 #include "arm.h"
 #include "armv7a.h"
-#include "arm7a_cache.h"
+#include "armv7a_cache.h"
 #include <helper/time_support.h>
 #include "target.h"
 #include "target_type.h"
