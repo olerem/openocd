@@ -508,7 +508,7 @@ static int armv7a_handle_l2x_cache_info_command(struct command_context *cmd_ctx,
 	return ERROR_OK;
 }
 
-
+/* FIXME: remove it */
 static int armv7a_l2x_cache_init(struct target *target, uint32_t base, uint32_t way)
 {
 	struct armv7a_l2x_cache *l2x_cache;
@@ -551,6 +551,7 @@ static int armv7a_l2x_cache_init(struct target *target, uint32_t base, uint32_t 
 	return ERROR_OK;
 }
 
+/* FIXME: remove it */
 COMMAND_HANDLER(handle_cache_l2x)
 {
 	struct target *target = get_current_target(CMD_CTX);
