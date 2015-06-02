@@ -421,6 +421,7 @@ COMMAND_HANDLER(arm7a_l2x_cache_clean_virt_cmd)
 	return armv7a_l2x_cache_clean_virt(target, virt, size);
 }
 
+/* FIXME: should we configure way size? or controller type? */
 COMMAND_HANDLER(armv7a_l2x_cache_conf_cmd)
 {
 	struct target *target = get_current_target(CMD_CTX);
