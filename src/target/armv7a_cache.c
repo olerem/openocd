@@ -105,6 +105,34 @@ done:
 	return retval;
 }
 
+int armv7a_cache_auto_flush_all_data(struct target *target)
+{
+	int retval = ERROR_FAIL;
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+
+	if (!armv7a->armv7a_mmu.armv7a_cache.auto_cache_enabled)
+		return ERROR_OK;
+
+	if (target->smp) {
+		struct target_list *head;
+		struct target *curr;
+		head = target->head;
+		while (head != (struct target_list *)NULL) {
+			curr = head->target;
+			if (curr->state == TARGET_HALTED)
+				retval = armv7a_l1_d_cache_clean_inval_all(curr);
+
+			head = head->next;
+		}
+	} else
+		retval = armv7a_l1_d_cache_clean_inval_all(target);
+
+	/* FIXME: do l2x flashing here */
+
+	return retval;
+}
+
+
 static int armv7a_l1_d_cache_inval_virt(struct target *target, uint32_t virt,
 					uint32_t size)
 {
