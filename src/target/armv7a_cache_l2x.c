@@ -189,6 +189,40 @@ static int arm7a_handle_l2x_cache_info_command(struct command_context *cmd_ctx,
 	return ERROR_OK;
 }
 
+static int armv7a_l2x_cache_init(struct target *target, uint32_t base, uint32_t way)
+{
+	struct armv7a_l2x_cache *l2x_cache;
+	struct target_list *head = target->head;
+	struct target *curr;
+
+	struct armv7a_common *armv7a = target_to_armv7a(target);
+	if (armv7a->armv7a_mmu.armv7a_cache.l2_cache) {
+		LOG_ERROR("L2 cache was already initialised\n");
+		return ERROR_FAIL;
+	}
+
+	l2x_cache = calloc(1, sizeof(struct armv7a_l2x_cache));
+	l2x_cache->base = base;
+	l2x_cache->way = way;
+	armv7a->armv7a_mmu.armv7a_cache.l2_cache = l2x_cache;
+
+	/*  initialize all targets in this cluster (smp target)
+	 *  l2 cache must be configured after smp declaration */
+	while (head != (struct target_list *)NULL) {
+		curr = head->target;
+		if (curr != target) {
+			armv7a = target_to_armv7a(curr);
+			if (armv7a->armv7a_mmu.armv7a_cache.l2_cache) {
+				LOG_ERROR("smp target : cache l2 already initialized\n");
+				return ERROR_FAIL;
+			}
+			armv7a->armv7a_mmu.armv7a_cache.l2_cache = l2x_cache;
+		}
+		head = head->next;
+	}
+	return ERROR_OK;
+}
+
 #if 0
 static const struct l2c_init_data of_l2c310_data = {
 	.type = "L2C-310",
@@ -387,7 +421,30 @@ COMMAND_HANDLER(arm7a_l2x_cache_clean_virt_cmd)
 	return armv7a_l2x_cache_clean_virt(target, virt, size);
 }
 
+COMMAND_HANDLER(armv7a_l2x_cache_conf_cmd)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	uint32_t base, way;
+
+	if (CMD_ARGC != 2)
+		return ERROR_COMMAND_SYNTAX_ERROR;
+
+	/* command_print(CMD_CTX, "%s %s", CMD_ARGV[0], CMD_ARGV[1]); */
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], base);
+	COMMAND_PARSE_NUMBER(u32, CMD_ARGV[1], way);
+
+	/* AP address is in bits 31:24 of DP_SELECT */
+	return armv7a_l2x_cache_init(target, base, way);
+}
+
 static const struct command_registration arm7a_l2x_cache_commands[] = {
+	{
+		.name = "conf",
+		.handler = armv7a_l2x_cache_conf_cmd,
+		.mode = COMMAND_ANY,
+		.help = "configure l2x cache ",
+		.usage = "<base_addr> <number_of_way>",
+	},
 	{
 		.name = "info",
 		.handler = arm7a_l2x_cache_info_command,
