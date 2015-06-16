@@ -824,7 +824,12 @@ int mpsse_flush(struct mpsse_ctx *ctx)
 
 	/* Polling loop, more or less taken from libftdi */
 	while (!write_result.done || !read_result.done) {
-		retval = libusb_handle_events(ctx->usb_ctx);
+		struct timeval tv;
+
+		tv.tv_sec = 10;
+		tv.tv_usec = 0;
+		retval = libusb_handle_events_timeout_completed(ctx->usb_ctx, &tv, NULL);
+
 		keep_alive();
 		if (retval != LIBUSB_SUCCESS && retval != LIBUSB_ERROR_INTERRUPTED) {
 			libusb_cancel_transfer(write_transfer);
