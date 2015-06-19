@@ -543,15 +543,20 @@ int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info, uint32_t addr, int size
 
 			if (size == 4)
 				pracc_add(&ctx, 0, MIPS32_LW(8, LOWER16(addr), 9));		/* load from memory to $8 */
-			else if (size == 2)
+			else if (size == 2) {
 				pracc_add(&ctx, 0, MIPS32_LHU(8, LOWER16(addr), 9));
-			else
+				pracc_add(&ctx, 0, MIPS32_NOP);							/* nop - add delay to allow read operation to complete ??? */
+			}
+			else {
 				pracc_add(&ctx, 0, MIPS32_LBU(8, LOWER16(addr), 9));
+				pracc_add(&ctx, 0, MIPS32_NOP);							/* nop - add delay to allow read operation to complete ??? */
+			}
 
 			pracc_add(&ctx, MIPS32_PRACC_PARAM_OUT + i * 4,
 					  MIPS32_SW(8, PRACC_OUT_OFFSET + i * 4, 15));		/* store $8 at param out */
 			addr += size;
 		}
+
 		pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(ejtag_info->reg8)));		/* restore upper 16 bits of reg 8 */
 		pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(ejtag_info->reg8)));	/* restore lower 16 bits of reg 8 */
 		pracc_add(&ctx, 0, MIPS32_LUI(9, UPPER16(ejtag_info->reg9)));		/* restore upper 16 bits of reg 9 */
