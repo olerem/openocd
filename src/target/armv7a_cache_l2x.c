@@ -51,12 +51,14 @@ static int arm7a_l2x_flush_all_data(struct target *target)
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 	struct armv7a_l2x_cache *l2x_cache = (struct armv7a_l2x_cache *)
 		(armv7a->armv7a_mmu.armv7a_cache.l2_cache);
-	uint32_t l2_way_val = (1 << l2x_cache->way) - 1;
+	uint32_t l2_way_val;
 	int retval;
 
 	retval = arm7a_l2x_sanity_check(target);
 	if (retval)
 		return retval;
+
+	l2_way_val = (1 << l2x_cache->way) - 1;
 
 	return target_write_phys_memory(target,
 			l2x_cache->base + L2X0_CLEAN_INV_WAY,
@@ -227,6 +229,7 @@ COMMAND_HANDLER(arm7a_l2x_cache_info_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
 	struct armv7a_common *armv7a = target_to_armv7a(target);
+	int retval;
 
 	retval = arm7a_l2x_sanity_check(target);
 	if (retval)
