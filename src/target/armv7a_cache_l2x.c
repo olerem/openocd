@@ -228,6 +228,10 @@ COMMAND_HANDLER(arm7a_l2x_cache_info_command)
 	struct target *target = get_current_target(CMD_CTX);
 	struct armv7a_common *armv7a = target_to_armv7a(target);
 
+	retval = arm7a_l2x_sanity_check(target);
+	if (retval)
+		return retval;
+
 	return arm7a_handle_l2x_cache_info_command(CMD_CTX,
 			&armv7a->armv7a_mmu.armv7a_cache);
 }
