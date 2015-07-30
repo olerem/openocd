@@ -172,6 +172,7 @@ int mips32_pracc_clean_text_jump(struct mips_ejtag *ejtag_info)
 		return retval;
 
 	if (ejtag_info->pa_addr != MIPS32_PRACC_TEXT) {			/* LEXRA/BMIPS ?, shift out another NOP */
+//		LOG_INFO ("Clean text - LEXRA/BMIPS");
 		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_DATA);
 		mips_ejtag_drscan_32_out(ejtag_info, MIPS32_NOP);
 		retval = mips32_pracc_finish(ejtag_info);
@@ -334,6 +335,8 @@ int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ct
 			return ERROR_OK;
 		}
 	}
+
+	return ERROR_OK; /* ??? */
 }
 
 inline void pracc_queue_init(struct pracc_queue_info *ctx)
@@ -356,7 +359,7 @@ inline void pracc_add(struct pracc_queue_info *ctx, uint32_t addr, uint32_t inst
 	ctx->pracc_list[ctx->code_count++] = instr;
 
 	if (dump == 1)
-		LOG_INFO("addr:0x%8.8x, data: 0x%8.8x", addr, instr);
+		LOG_DEBUG("addr:0x%8.8x, data: 0x%8.8x", addr, instr);
 	
 	if (addr)
 		ctx->store_count++;
@@ -427,7 +430,7 @@ int mips32_pracc_queue_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_in
 
 		ejtag_ctrl = buf_get_u32(scan_in[scan_count].scan_32.ctrl, 0, 32);
 		if (!(ejtag_ctrl & EJTAG_CTRL_PRACC)) {
-			LOG_ERROR("Error: access not pending  count: %d", scan_count);
+			LOG_ERROR("Error: access not pending count: %d", scan_count);
 			retval = ERROR_FAIL;
 			goto exit;
 		}
@@ -436,7 +439,7 @@ int mips32_pracc_queue_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_in
 
 		if (store_addr != 0) {
 			if (!(ejtag_ctrl & EJTAG_CTRL_PRNW)) {
-				LOG_ERROR("Not a store/write access, count: %d", scan_count);
+				LOG_ERROR("Not a store/write access(addr:%x), count: %d", addr, scan_count);
 				retval = ERROR_FAIL;
 				goto exit;
 			}
@@ -502,13 +505,15 @@ exit:
 	return ctx.retval;
 }
 
-int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info, uint32_t addr, int size, int count, void *buf)
+int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info, uint32_t addr, int size, int count, void *buf, int cputype)
 {
-	if (count == 1 && size == 4)
+	if (count == 1 && size == 4){
 		return mips32_pracc_read_u32(ejtag_info, addr, (uint32_t *)buf);
+	}
 
 	uint32_t *data = NULL;
 	struct pracc_queue_info ctx = {.max_code = 256 * 3 + 8 + 1};	/* alloc memory for the worst case */
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -545,18 +550,21 @@ int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info, uint32_t addr, int size
 				pracc_add(&ctx, 0, MIPS32_LW(8, LOWER16(addr), 9));		/* load from memory to $8 */
 			else if (size == 2) {
 				pracc_add(&ctx, 0, MIPS32_LHU(8, LOWER16(addr), 9));
-				pracc_add(&ctx, 0, MIPS32_NOP);							/* nop - add delay to allow read operation to complete ??? */
+//				LOG_INFO ("LH addr: %x size: %x cputype: 0x%x", addr, size, cputype);
+				if (cputype == MIPS_CP0_mAPTIV_uP)
+					pracc_add(&ctx, 0, MIPS32_NOP);						/* nop - Added to allow read to complete before store. Possible hardware bug */
 			}
 			else {
 				pracc_add(&ctx, 0, MIPS32_LBU(8, LOWER16(addr), 9));
-				pracc_add(&ctx, 0, MIPS32_NOP);							/* nop - add delay to allow read operation to complete ??? */
+//				LOG_INFO ("LB addr: %x size: %x cputype: 0x%x", addr, size, cputype);
+				if (cputype == MIPS_CP0_mAPTIV_uP)
+					pracc_add(&ctx, 0, MIPS32_NOP);						/* nop - Added to allow read to complete before store. Possible hardware bug */
 			}
 
 			pracc_add(&ctx, MIPS32_PRACC_PARAM_OUT + i * 4,
 					  MIPS32_SW(8, PRACC_OUT_OFFSET + i * 4, 15));		/* store $8 at param out */
 			addr += size;
 		}
-
 		pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(ejtag_info->reg8)));		/* restore upper 16 bits of reg 8 */
 		pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(ejtag_info->reg8)));	/* restore lower 16 bits of reg 8 */
 		pracc_add(&ctx, 0, MIPS32_LUI(9, UPPER16(ejtag_info->reg9)));		/* restore upper 16 bits of reg 9 */
@@ -567,13 +575,18 @@ int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info, uint32_t addr, int size
 
 		if (size == 4) {
 			ctx.retval = mips32_pracc_exec(ejtag_info, &ctx, buf32);
-			if (ctx.retval != ERROR_OK)
+			if (ctx.retval != ERROR_OK){
+				LOG_DEBUG("mips32_pracc_exec failed");
 				goto exit;
+			}
 			buf32 += this_round_count;
 		} else {
 			ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, data);
-			if (ctx.retval != ERROR_OK)
+
+			if (ctx.retval != ERROR_OK){
+				LOG_DEBUG("mips32_pracc_queue_exec failed");
 				goto exit;
+			}
 
 			uint32_t *data_p = data;
 			for (int i = 0; i != this_round_count; i++) {
@@ -595,6 +608,7 @@ exit:
 int mips32_pracc_cp0_read(struct mips_ejtag *ejtag_info, uint32_t *val, uint32_t cp0_reg, uint32_t cp0_sel)
 {
 	struct pracc_queue_info ctx = {.max_code = 7};
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -633,6 +647,7 @@ exit:
 int mips32_pracc_cp0_write(struct mips_ejtag *ejtag_info, uint32_t val, uint32_t cp0_reg, uint32_t cp0_sel)
 {
 	struct pracc_queue_info ctx = {.max_code = 6};
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -691,6 +706,7 @@ static int mips32_pracc_synchronize_cache(struct mips_ejtag *ejtag_info,
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
+
 	/** Find cache line size in bytes */
 	uint32_t clsiz;
 	if (rel) {	/* Release 2 (rel = 1) */
@@ -789,6 +805,7 @@ static int mips32_pracc_write_mem_generic(struct mips_ejtag *ejtag_info,
 		uint32_t addr, int size, int count, const void *buf)
 {
 	struct pracc_queue_info ctx = {.max_code = 128 * 3 + 5 + 1};	/* alloc memory for the worst case */
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -846,7 +863,7 @@ static int mips32_pracc_write_mem_generic(struct mips_ejtag *ejtag_info,
 
 		ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
 		if (ctx.retval != ERROR_OK) {
-			LOG_DEBUG("mips32_pracc_exec failed");
+			LOG_ERROR("mips32_pracc_exec failed");
 			goto exit;
 		}
 
@@ -1114,6 +1131,7 @@ int mips32_pracc_write_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 	};
 
 	struct pracc_queue_info ctx = {.max_code = 37 * 2 + 7 + 1};
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -1129,12 +1147,13 @@ int mips32_pracc_write_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 			pracc_add(&ctx, 0, MIPS32_ORI(i, i, LOWER16((regs[i]))));
 		}
 	}
-
+	dump = 0;
 	for (int i = 0; i != 6; i++) {
 		pracc_add(&ctx, 0, MIPS32_LUI(1, UPPER16((regs[i + 32]))));		/* load CPO value in $1, with lui and ori */
 		pracc_add(&ctx, 0, MIPS32_ORI(1, 1, LOWER16((regs[i + 32]))));
 		pracc_add(&ctx, 0, cp0_write_code[i]);					/* write value from $1 to CPO register */
 	}
+	dump = 0;
 	pracc_add(&ctx, 0, MIPS32_MTC0(15, 31, 0));				/* load $15 in DeSave */
 	pracc_add(&ctx, 0, MIPS32_LUI(1, UPPER16((regs[1]))));			/* load upper half word in $1 */
 	pracc_add(&ctx, 0, MIPS32_B(NEG16(ctx.code_count + 1)));					/* jump to start */
@@ -1153,6 +1172,7 @@ int mips32_pracc_write_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 {
 
 	struct pracc_queue_info ctx = {.max_code = 110};
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -1216,6 +1236,7 @@ int mips32_pracc_read_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 	};
 
 	struct pracc_queue_info ctx = {.max_code = 49};
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -1249,13 +1270,13 @@ int mips32_pracc_read_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 	ejtag_info->reg9 = regs[9];
 exit:
 	pracc_queue_free(&ctx);
-
 	return ctx.retval;
 }
 
 int mips32_pracc_read_tlb_entry(struct mips_ejtag *ejtag_info, uint32_t *data, uint32_t index)
 {
 	struct pracc_queue_info ctx = {.max_code = 49};
+
 	pracc_queue_init(&ctx);
 	if (ctx.retval != ERROR_OK)
 		goto exit;
@@ -1267,7 +1288,6 @@ int mips32_pracc_read_tlb_entry(struct mips_ejtag *ejtag_info, uint32_t *data, u
 		MIPS32_MFC0(8, 5, 0)			/* Read C0_PAGEMASK */
 	};
 
-	dump = 0;
 	pracc_add(&ctx, 0, MIPS32_LUI(15, PRACC_UPPER_BASE_ADDR)); /* $15 = MIP32_PRACC_BASE_ADDR */
 	pracc_add(&ctx, 0, MIPS32_LUI(8, UPPER16(index)));		   /* Load TLB Index to $8 */
 	pracc_add(&ctx, 0, MIPS32_ORI(8, 8, LOWER16(index)));
@@ -1290,16 +1310,13 @@ int mips32_pracc_read_tlb_entry(struct mips_ejtag *ejtag_info, uint32_t *data, u
 
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, data);
 exit:
-	dump = 0;
 	pracc_queue_free(&ctx);
-
 	return ctx.retval;
 }
 
 int mips32_pracc_read_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 {
 	int i;
-
 	struct pracc_queue_info ctx = {.max_code = 80};
 
 	pracc_queue_init(&ctx);
@@ -1337,7 +1354,6 @@ int mips32_pracc_read_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, regs);
 exit:
 	pracc_queue_free(&ctx);
-
 	return ctx.retval;
 }
 

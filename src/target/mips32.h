@@ -67,6 +67,10 @@
 
 /* offsets into mips32 core register cache */
 enum {
+	MIPS32_R2 = 2,
+	MIPS32_R4 = 4,
+	MIPS32_R5 = 5,
+	MIPS32_R25 = 25,
 	MIPS32_PC = 37,
 	MIPS32_FIR = 71,
 	MIPS32NUMCOREREGS
@@ -224,6 +228,10 @@ enum dsp_rev {
 	DSP_REV2 = 1,
 };
 
+enum semihosting {
+	DISABLE_SEMIHOSTING = false,
+	ENABLE_SEMIHOSTING = true,
+};
 struct mips32_comparator {
 	int used;
 	uint32_t bp_value;
@@ -241,6 +249,8 @@ struct mips32_common {
 	enum dsp dsp_implemented;
 	enum dsp_rev dsp_rev;
 	enum fp fp_implemented;
+	int fdc;
+	enum semihosting semihosting;
 
 	/* Mask used to determine is CP0 name valid for core */
 	/* note hard coded for M4K to support backward compatibility */
@@ -889,6 +899,7 @@ typedef struct {
 	bool msa;							// does cpu have MSA module
 	bool mvh;							// are mfhc0 and mthc0 instructions implemented?
 	bool guestCtl1Present;
+	bool cdmm;
 } CPU_INFO;
 
 extern const struct command_registration mips32_command_handlers[];

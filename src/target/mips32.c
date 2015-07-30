@@ -38,6 +38,8 @@
 #include "algorithm.h"
 #include "register.h"
 
+int mips_common_handle_target_request(void *priv);
+
 static const char *mips_isa_strings[] = {
 	"MIPS32", "MIPS16"
 };
@@ -404,6 +406,7 @@ int mips32_save_context(struct target *target)
 					LOG_DEBUG("writing status register failed");
 			}
 		} else {
+//			LOG_INFO("Enable COP2");
 			/* Read Status register, save it and modify to enable CP0 */
 			retval = mips32_pracc_cp0_read(ejtag_info, &status, 12, 0);
 			if (retval != ERROR_OK) {
@@ -583,6 +586,8 @@ int mips32_read_cpu_config_info (struct target *target)
 	uint32_t config;
 	uint32_t config3;
 	uint32_t config1;
+	uint32_t config23;
+	uint32_t dcr;
 
 	/* Read PRID registers */
 	if ((retval = mips32_pracc_cp0_read(ejtag_info, &prid, 15, 0)) != ERROR_OK) {
@@ -590,19 +595,26 @@ int mips32_read_cpu_config_info (struct target *target)
 		return retval;
 	}
 
-	/* Read Config registers */
+	/* Read Config register */
 	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config, 16, 0))!= ERROR_OK) {
 		LOG_DEBUG("Read of Config reg Failed");
 		return retval;
 	}
 
-	/* Read Config1 registers */
+	/* Read Config1 register */
 	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config1, 16, 1))!= ERROR_OK) {
 		LOG_DEBUG("Read of Config1 read Failed");
 		return retval;
 	}
 
-	/* Read Config3 registers */
+	/* Read debug(config 32, 0 register */
+	if ((retval = mips32_pracc_cp0_read(ejtag_info, &config23, 23, 0))!= ERROR_OK) {
+		LOG_DEBUG("Read of Config1 read Failed");
+		return retval;
+	} else
+		LOG_DEBUG("Debug register: 0x%8.8x", config23);
+
+	/* Read Config3 register */
 	retval = mips32_pracc_cp0_read(ejtag_info, &config3, 16, 3);
 	if (retval != ERROR_OK) {
 		LOG_DEBUG("reading config3 register failed");
@@ -618,6 +630,23 @@ int mips32_read_cpu_config_info (struct target *target)
 
 	/* Retrieve ISA Mode */
 	mips32->mmips = ((config3 & CFG3_ISA_MODE) >>  14);
+
+	/* Determine if FDC and CDMM are implemented for this core */
+	if ((retval = target_read_u32(target, EJTAG_DCR, &dcr)) != ERROR_OK)
+		return retval;
+
+	if ((((dcr > 18) & 0x1) == 1) && ((config3 & 0x00000008) != 0)) {
+		retval = target_register_timer_callback(mips_common_handle_target_request, 3, 3, target);
+		if (retval != ERROR_OK)
+			return retval;
+
+		mips32->fdc = 1;
+		mips32->semihosting = ENABLE_SEMIHOSTING;
+	}
+	else {
+		mips32->fdc = 0;
+		mips32->semihosting = DISABLE_SEMIHOSTING;
+	}
 
 	uint32_t cputype = DetermineCpuTypeFromPrid(prid, config, config1);
 
@@ -691,11 +720,13 @@ struct reg_cache *mips32_build_reg_cache(struct target *target)
 	return cache;
 }
 
+
 int mips32_init_arch_info(struct target *target, struct mips32_common *mips32, struct jtag_tap *tap)
 {
 	target->arch_info = mips32;
 	mips32->common_magic = MIPS32_COMMON_MAGIC;
 	mips32->fast_data_area = NULL;
+	int retval;
 
 	/* has breakpoint/watchpint unit been scanned */
 	mips32->bp_scanned = 0;
@@ -707,6 +738,7 @@ int mips32_init_arch_info(struct target *target, struct mips32_common *mips32, s
 
 	mips32->ejtag_info.scan_delay = MIPS32_SCAN_DELAY_LEGACY_MODE;	/* Initial default value */
 	mips32->ejtag_info.mode = 0;			/* Initial default value */
+	mips32->fdc = -1;
 
 	return ERROR_OK;
 }
@@ -1440,6 +1472,52 @@ static int mips32_verify_pointer(struct command_context *cmd_ctx,
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(handle_mips_semihosting_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+
+	if (target == NULL) {
+		LOG_ERROR("No target selected");
+		return ERROR_FAIL;
+	}
+
+	if (ejtag_info->ejtag_version < EJTAG_VERSION_51) {
+		LOG_ERROR("Ejtag interface does not support FDC");
+		return ERROR_FAIL;
+	}
+
+	if (mips32->fdc == 0) {
+		LOG_ERROR("FDC not supported by this core");
+		return ERROR_FAIL;
+	}
+
+	if (CMD_ARGC > 0) {
+		int semihosting;
+
+		COMMAND_PARSE_ENABLE(CMD_ARGV[0], semihosting);
+
+		if (!target_was_examined(target)) {
+			LOG_ERROR("Target not examined yet");
+			return ERROR_FAIL;
+		}
+
+		if (semihosting) {
+			mips32->semihosting = ENABLE_SEMIHOSTING;
+
+		} else {
+			mips32->semihosting = DISABLE_SEMIHOSTING;
+		}
+	}
+
+	command_print(CMD_CTX, "semihosting is %s",
+				  mips32->semihosting
+				  ? "enabled" : "disabled");
+
+	return ERROR_OK;
+}
+
 int mips32_cp0_command(struct command_invocation *cmd)
 {
 	int retval;
@@ -1702,6 +1780,7 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 
 	/* MIPS® SIMD Architecture (MSA) */
 	info.msa = (config3 & 0x10000000) ? 1 : 0;
+	info.cdmm = (config3 & 0x00000008) ? 1 : 0;
 	info.mvh = (config5 & (1<<5)) ? 1 : 0;		/* mvh */
 
 	/* MMU Supported */
@@ -2247,6 +2326,14 @@ COMMAND_HANDLER(mips32_handle_cpuinfo_command)
 
 	LOG_USER ("mvh: %s", &text[0]);
 
+	/* Common Device Memory Map implemented? */
+	if (info.cdmm)
+		strcpy(text, "true");
+	else
+		strcpy(text, "false");
+
+	LOG_USER ("cdmm: %s", &text[0]);
+
 	return ERROR_OK;
 }
 
@@ -2526,11 +2613,10 @@ COMMAND_HANDLER(mips32_handle_dump_tlb_command)
 	return ERROR_OK;
 }
 
-//extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
-//extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
+extern void ejtag_main_print_imp(struct mips_ejtag *ejtag_info);
+extern int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode);
 COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 {
-#if 0
 	struct target *target = get_current_target(CMD_CTX);
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
@@ -2559,7 +2645,30 @@ COMMAND_HANDLER(mips32_handle_ejtag_reg_command)
 	/* Display current DCR */
 	retval = target_read_u32(target, EJTAG_DCR, &dcr);
 	LOG_USER("          DCR: 0x%8.8x", dcr);
-#endif
+
+	if (((dcr > 22) & 0x1) == 1)
+		LOG_USER("DAS supported");
+
+	if (((dcr > 18) & 0x1) == 1)
+		LOG_USER("FDC supported");
+
+	if (((dcr > 17) & 0x1) == 1)
+		LOG_USER("DataBrk supported");
+
+	if (((dcr > 16) & 0x1) == 1)
+		LOG_USER("InstBrk supported");
+
+	if (((dcr > 15) & 0x1) == 1)
+		LOG_USER("Inverted Data value supported");
+
+	if (((dcr > 14) & 0x1) == 1)
+		LOG_USER("Data value stored supported");
+
+	if (((dcr > 10) & 0x1) == 1)
+		LOG_USER("Complex Breakpoints supported");
+
+	if (((dcr > 9) & 0x1) == 1)
+		LOG_USER("PC Sampling supported");
 
 	return ERROR_OK;
 }
@@ -2612,6 +2721,13 @@ static const struct command_registration mips32_exec_command_handlers[] = {
 		.mode = COMMAND_ANY,
 		.help = "dump_tlb",
 		.usage = "[entry]",
+	},
+	{
+		"semihosting",
+		.handler = handle_mips_semihosting_command,
+		.mode = COMMAND_EXEC,
+		.usage = "['enable'|'disable']",
+		.help = "activate support for semihosting operations",
 	},
 	{
 		.name = "ejtag_reg",

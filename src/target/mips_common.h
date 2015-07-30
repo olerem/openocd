@@ -66,5 +66,6 @@ int mips_common_remove_watchpoint(struct target *target, struct watchpoint *watc
 /* Common commands define in both m4k and mips32 targets */
 int mips_common_scan_delay(struct command_invocation *cmd);
 int mips_common_cp0_command(struct command_invocation *cmd);
+int mips_common_target_request_data(struct target *target, uint32_t size, uint8_t *buffer);
 
 #endif	/*MIPS_COMMON_H*/

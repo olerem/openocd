@@ -51,6 +51,75 @@ int mips_common_internal_restore(struct target *target, int current,
 int mips_common_bulk_write_memory(struct target *target, uint32_t address,
 						   uint32_t count, const uint8_t *buffer);
 
+/**
+ * Handles requests to an MIPs FDC interface.  If semi-hosting messaging is enabled,
+ * the target is running, EJTAG DCR FDC implemented (bit 18) and Config3 CDMM (Common
+ * Device Memory Map Feature is implemented (bit 3), this will execute the request 
+ * from the target.
+ *
+ * @param priv Void pointer expected to be a struct target pointer
+ * @return ERROR_OK unless there are issues with the JTAG queue or when reading
+ * from the Embedded ICE unit
+ */
+int mips_common_handle_target_request(void *priv)
+{
+	int retval = ERROR_OK;
+	struct scan_field fields;
+	tap_state_t endstate;
+	int num_fields;
+	struct target *target = priv;
+	void *t = malloc(5);
+	void *r = malloc(5);
+
+	if (!target_was_examined(target)) {
+		LOG_DEBUG("Target not examined yet");
+		return ERROR_OK;
+	}
+
+	struct mips32_common *mips32 = target_to_mips32(target);
+	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
+	unsigned long long fdc_data = 0;
+	volatile uint64_t request_data;
+
+	if (target->state == TARGET_RUNNING) {
+
+		int i=0;
+		do {
+			const char *str = "0x2000000000";
+			request_data = 0x2000000000;
+			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_FDC);
+
+			endstate = TAP_IDLE;
+			fields.num_bits = 38;
+			fields.out_value = t;
+
+			str_to_buf(str, 12, t, 38, 0);
+
+			fields.in_value = r;
+			jtag_add_dr_scan(target->tap, 1, &fields, endstate);
+
+			retval = jtag_execute_queue();
+			fdc_data = buf_get_u38(fields.in_value, 0, 38);
+			fdc_data &= 0x3FFFFFFFFF;
+
+			if ((((fdc_data >> 36) & 1) == 1) && (mips32->semihosting == ENABLE_SEMIHOSTING)) {
+//				LOG_INFO ("data read: %llx", fdc_data);
+				uint8_t *fdc_char = (void *) &fdc_data;
+				printf ("%0.4s", fdc_char);
+				fflush(stdout);
+			}
+
+			/* Break after processing 16 32-bit word */
+			if (i >= 16)
+				break;
+			else i++;
+
+		} while (((fdc_data >> 36) & 1) == 1);
+	}
+
+	return ERROR_OK;
+}
+
 int mips_common_examine_debug_reason(struct target *target)
 {
 	struct mips32_common *mips32 = target_to_mips32(target);
@@ -852,7 +921,7 @@ int mips_common_unset_breakpoint(struct target *target,
 			retval = target_read_memory(target, breakpoint->address, (breakpoint->length & 0xE),
 										1, (uint8_t *)&current_instr);
 			if (retval != ERROR_OK) {
-				LOG_DEBUG("target_read_memory failed");
+				LOG_DEBUG("target_read_memory failed - addr: %x", breakpoint->address);
 				return retval;
 			}
 
@@ -865,8 +934,10 @@ int mips_common_unset_breakpoint(struct target *target,
 
 			if ((current_instr == MIPS32_SDBBP) || (current_instr == MICRO_MIPS32_SDBBP)) {
 				retval = target_write_memory(target, breakpoint->address, 4, 1, breakpoint->orig_instr);
-				if (retval != ERROR_OK)
+				if (retval != ERROR_OK){
+					LOG_DEBUG("target_write_memory failed");
 					return retval;
+				}
 			} else {
 				LOG_WARNING("memory modified: no SDBBP instruction found");
 				LOG_WARNING("orignal instruction not written back to memory");
@@ -878,7 +949,7 @@ int mips_common_unset_breakpoint(struct target *target,
 			/* check that user program has not modified breakpoint instruction */
 			retval = target_read_memory(target, breakpoint->address, 2, 1, (uint8_t *)&current_instr);
 			if (retval != ERROR_OK) {
-				LOG_DEBUG("target_read_memory failed");
+				LOG_ERROR("target_read_memory failed");
 				return retval;
 			}
 
@@ -886,7 +957,7 @@ int mips_common_unset_breakpoint(struct target *target,
 			if ((current_instr == MIPS16_SDBBP) || (current_instr == MICRO_MIPS_SDBBP)) {
 				retval = target_write_memory(target, breakpoint->address, 2, 1, breakpoint->orig_instr);
 				if (retval != ERROR_OK) {
-					LOG_DEBUG("target_write_memory failed");
+					LOG_ERROR("target_write_memory failed");
 					return retval;
 				}
 			} else {
@@ -1087,7 +1158,7 @@ int mips_common_read_memory(struct target *target, uint32_t address,
 	/* Note: Currently no core implement this feature */
 	int retval;
 	if (ejtag_info->impcode & EJTAG_IMP_NODMA) {
-		retval = mips32_pracc_read_mem(ejtag_info, address, size, count, t);
+		retval = mips32_pracc_read_mem(ejtag_info, address, size, count, t, mips32->cp0_mask);
 	}
 	else
 		retval = mips32_dmaacc_read_mem(ejtag_info, address, size, count, t);

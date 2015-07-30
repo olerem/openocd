@@ -59,7 +59,7 @@ int mips32_pracc_queue_exec(struct mips_ejtag *ejtag_info,
 							struct pracc_queue_info *ctx, uint32_t *buf);
 
 int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info,
-		uint32_t addr, int size, int count, void *buf);
+						  uint32_t addr, int size, int count, void *buf, int cputype);
 int mips32_pracc_write_mem(struct mips_ejtag *ejtag_info,
 		uint32_t addr, int size, int count, const void *buf);
 int mips32_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info, struct working_area *source,
