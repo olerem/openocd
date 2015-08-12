@@ -9,7 +9,7 @@ proc mww_with_test {reg val} {
 	}
 }
 
-proc my_cache_clean_test {} {
+proc my_clean_test {} {
 	set def_addr 0x805cabd0
 	set pattern_1 0xaaaaaaaa
 	set pattern_2 0x55555555
@@ -22,10 +22,15 @@ proc my_cache_clean_test {} {
 
 	# Write down some pattern and make sure it will go to the RAM
 	mww_with_test $def_addr $pattern_1
-	cache l1 d clean $def_addr
+	if [ catch { cache l1 d clean $def_addr } msg ] {
+		echo "ERROR: clean l1 cache"
+	}
+	echo "clean l2x cache"
 	cache l2x clean $def_addr
 
+	echo "inval l1 cache"
 	cache l1 d inval $def_addr
+	echo "inval l2x cache"
 	cache l2x inval $def_addr
 
 	set tmp [mrw $def_addr]
