@@ -15,6 +15,9 @@ proc mww_with_test {reg val} {
 	}
 }
 
+
+# This test will probe only one CPU path. If you have SMP
+# switch the CPU manually with "targets bla.blu.cpu.1"
 proc cache_inval_test {reg} {
 	set pattern_1 0xaaaaaaaa
 	set pattern_2 0x55555555
