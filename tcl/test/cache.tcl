@@ -9,7 +9,7 @@ proc mww_with_test {reg val} {
 	}
 }
 
-proc cache_clean_test {} {
+proc my_cache_clean_test {} {
 	set def_addr 0x805cabd0
 	set pattern_1 0xaaaaaaaa
 	set pattern_2 0x55555555
