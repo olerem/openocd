@@ -1,9 +1,15 @@
 source [find mem_helper.tcl]
 
+proc cache_mrw {reg} {
+#	set ret [lindex [ocd_mdw $reg] 1];
+#	return 0x$ret;
+	return [mrw $reg]
+}
+
 proc mww_with_test {reg val} {
 	mww $reg $val
 
-	set tmp [mrw $reg]
+	set tmp [cache_mrw $reg]
 	if { $val != $tmp } {
 		echo [format "write error. Got: 0x%08x, expected: 0x%08x" $tmp $val]
 	}
@@ -34,7 +40,7 @@ proc cache_inval_test {reg} {
 		return "ERROR: inval l2x inval"
 	}
 
-	set tmp [mrw $reg]
+	set tmp [cache_mrw $reg]
 	if { $pattern_1 != $tmp } {
 		echo [format "ERROR. Write to RAM over CPU. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
@@ -48,7 +54,7 @@ proc cache_inval_test {reg} {
 		return "ERROR: clean l1 inval"
 	}
 	# TODO, currently l1 d inval fails working. Fix it!!!!
-	set tmp [mrw $reg]
+	set tmp [cache_mrw $reg]
 	if { $pattern_1 != $tmp } {
 		echo [format "ERROR. Inval l1. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
@@ -58,7 +64,7 @@ proc cache_inval_test {reg} {
 	if [ catch { cache l2x inval $reg } msg ] {
 		return "ERROR: clean l2x inval"
 	}
-	set tmp [mrw $reg]
+	set tmp [cache_mrw $reg]
 	if { $pattern_1 != $tmp } {
 		echo [format "ERROR. Inval l2x. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
