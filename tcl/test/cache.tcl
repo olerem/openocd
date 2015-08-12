@@ -23,40 +23,47 @@ proc my_clean_test {} {
 	# Write down some pattern and make sure it will go to the RAM
 	mww_with_test $def_addr $pattern_1
 	if [ catch { cache l1 d clean $def_addr } msg ] {
-		echo "ERROR: clean l1 cache"
+		return "ERROR: clean l1 cache"
 	}
-	echo "clean l2x cache"
-	cache l2x clean $def_addr
+	if [ catch { cache l2x clean $def_addr } msg ] {
+		return "ERROR: clean l2x cache"
+	}
 
-	echo "inval l1 cache"
-	cache l1 d inval $def_addr
-	echo "inval l2x cache"
-	cache l2x inval $def_addr
+	if [ catch { cache l1 d inval $def_addr } msg ] {
+		return "ERROR: inval l1 inval"
+	}
+	if [ catch { cache l2x inval $def_addr } msg ] {
+		return "ERROR: inval l2x inval"
+	}
 
 	set tmp [mrw $def_addr]
 	if { $pattern_1 != $tmp } {
-		echo [format "Write to RAM - ERROR. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
+		echo [format "ERROR. Write to RAM. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
-		echo "Write to RAM - OK"
+		echo "OK   . Write to RAM"
 	}
 
 	# Write other patter. 
 	mww_with_test $def_addr $pattern_2
 
-	cache l1 d inval $def_addr
+	if [ catch { cache l1 d inval $def_addr } msg ] {
+		return "ERROR: clean l1 inval"
+	}
 	# TODO, currently l1 d inval is not working. Fix it!!!!
 	set tmp [mrw $def_addr]
 	if { $pattern_1 != $tmp } {
-		echo [format "Inval l1 - ERROR. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
+		echo [format "ERROR. Inval l1. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
-		echo "Inval l1 - OK"
+		echo "OK   . Inval l1"
 	}
 
-	cache l2x inval $def_addr
+	if [ catch { cache l2x inval $def_addr } msg ] {
+		return "ERROR: clean l2x inval"
+	}
 	set tmp [mrw $def_addr]
 	if { $pattern_1 != $tmp } {
-		echo [format "Inval l2x - ERROR. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
+		echo [format "ERROR. Inval l2x. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
-		echo "Inval l2x - OK"
+		echo "OK   . Inval l2x"
 	}
 }
