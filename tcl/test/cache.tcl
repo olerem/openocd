@@ -38,9 +38,9 @@ proc my_clean_test {} {
 
 	set tmp [mrw $def_addr]
 	if { $pattern_1 != $tmp } {
-		echo [format "ERROR. Write to RAM. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
+		echo [format "ERROR. Write to RAM over CPU. Got: 0x%08x, expected: 0x%08x" $tmp $pattern_1]
 	} else {
-		echo "OK   . Write to RAM"
+		echo "OK   . Write to RAM over CPU"
 	}
 
 	# Write other patter. 
