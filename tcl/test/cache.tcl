@@ -1,9 +1,9 @@
 source [find mem_helper.tcl]
 
 proc cache_mrw {reg} {
-#	set ret [lindex [ocd_mdw $reg] 1];
-#	return 0x$ret;
-	return [mrw $reg]
+	set ret [lindex [ocd_mdw $reg] 1]; sleep 0;
+	return 0x$ret;
+#	return [mrw $reg]
 }
 
 proc mww_with_test {reg val} {
