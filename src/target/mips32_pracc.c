@@ -431,6 +431,7 @@ int mips32_pracc_queue_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_in
 		ejtag_ctrl = buf_get_u32(scan_in[scan_count].scan_32.ctrl, 0, 32);
 		if (!(ejtag_ctrl & EJTAG_CTRL_PRACC)) {
 			LOG_ERROR("Error: access not pending count: %d", scan_count);
+			LOG_ERROR("Ejtag control: 0x%x -- store_addr: 0x%x",ejtag_ctrl, store_addr);
 			retval = ERROR_FAIL;
 			goto exit;
 		}
