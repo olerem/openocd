@@ -40,6 +40,9 @@
 #undef LOWER16
 #define UPPER16(v) ((uint32_t)((v >> 16) & 0xFFFF))
 #define LOWER16(v) ((uint32_t)(v & 0xFFFF))
+#define MIPS64_PRACC_FASTDATA_AREA		0xffffffffFF200000
+#define MIPS64_PRACC_FASTDATA_SIZE		16
+#define MIPS64_FASTDATA_HANDLER_SIZE	0x80
 
 /* FIXME: 16-bit NEG */
 #undef NEG16
@@ -58,5 +61,10 @@ int mips64_pracc_exec(struct mips_ejtag *ejtag_info,
 		      unsigned code_len, const uint32_t *code,
 		      unsigned num_param_in, uint64_t *param_in,
 		      unsigned num_param_out, uint64_t *param_out);
+
+int mips64_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info,
+			       struct working_area *source,
+			       bool write_t, uint64_t addr,
+			       unsigned count, uint64_t *buf);
 
 #endif /* OPENOCD_TARGET_MIPS64_PRACC_H */

@@ -1167,4 +1167,152 @@ int mips64_pracc_read_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 		0, NULL, MIPS64_NUM_REGS, regs);
 }
 
+/* fastdata upload/download requires an initialized working area
+ * to load the download code; it should not be called otherwise
+ * fetch order from the fastdata area
+ * 1. start addr
+ * 2. end addr
+ * 3. data ...
+ */
+int mips64_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info,
+			       struct working_area *source,
+			       bool write_t, uint64_t addr,
+			       unsigned count, uint64_t *buf)
+{
+	uint32_t handler_code[] = {
+		/* caution when editing, table is modified below */
+		/* r15 points to the start of this code */
+		MIPS64_SD(8, MIPS64_FASTDATA_HANDLER_SIZE - 8, 15),
+		MIPS64_SD(9, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 2, 15),
+		MIPS64_SD(10, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 3, 15),
+		MIPS64_SD(11, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 4, 15),
+		/* start of fastdata area in t0 */
+		MIPS64_LUI(8, UPPER16(MIPS64_PRACC_FASTDATA_AREA)),
+		MIPS64_ORI(8, 8, LOWER16(MIPS64_PRACC_FASTDATA_AREA)),
+		MIPS64_LD(9, 0, 8),								/* start addr in t1 */
+		MIPS64_LD(10, 0, 8),							/* end addr to t2 */
+														/* loop: */
+		/* 8 */ MIPS64_LD(11, 0, 0),					/* lw t3,[t8 | r9] */
+		/* 9 */ MIPS64_SD(11, 0, 0),					/* sw t3,[r9 | r8] */
+		MIPS64_BNE(10, 9, NEG16(3)),					/* bne $t2,t1,loop */
+		MIPS64_DADDIU(9, 9, 8),							/* addi t1,t1,4 */
+
+		MIPS64_LD(8, MIPS64_FASTDATA_HANDLER_SIZE - 8, 15),
+		MIPS64_LD(9, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 2, 15),
+		MIPS64_LD(10, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 3, 15),
+		MIPS64_LD(11, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 4, 15),
+
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_TEXT)),
+		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_TEXT)),
+		MIPS64_JR(15),								/* jr start */
+		MIPS64_DMFC0(15, 31, 0),						/* move COP0 DeSave to $15 */
+	};
+
+	uint32_t jmp_code[] = {
+		/* 0 */ MIPS64_LUI(15, 0),		/* addr of working area added below */
+		/* 1 */ MIPS64_ORI(15, 15, 0),	/* addr of working area added below */
+		MIPS64_JR(15),					/* jump to ram program */
+		MIPS64_NOP,
+	};
+
+	int retval;
+	unsigned i;
+	uint32_t ejtag_ctrl, address32;
+	uint64_t address, val;
+
+	if (source->size < MIPS64_FASTDATA_HANDLER_SIZE)
+		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+
+	if (write_t) {
+		handler_code[8] = MIPS64_LD(11, 0, 8);	/* load data from probe at fastdata area */
+		handler_code[9] = MIPS64_SD(11, 0, 9);	/* store data to RAM @ r9 */
+	} else {
+		handler_code[8] = MIPS64_LD(11, 0, 9);	/* load data from RAM @ r9 */
+		handler_code[9] = MIPS64_SD(11, 0, 8);	/* store data to probe at fastdata area */
+	}
+
+	/* write program into RAM */
+	if (write_t != ejtag_info->fast_access_save) {
+		mips64_pracc_write_mem(ejtag_info, source->address, 4, ARRAY_SIZE(handler_code), handler_code);
+		/* save previous operation to speed to any consecutive read/writes */
+		ejtag_info->fast_access_save = write_t;
+	}
+
+	LOG_DEBUG("%s using " TARGET_ADDR_FMT " for write handler", __func__, source->address);
+	LOG_DEBUG("daddiu: %08x", handler_code[11]);
+
+	jmp_code[0] |= UPPER16(source->address);
+	jmp_code[1] |= LOWER16(source->address);
+	mips64_pracc_exec(ejtag_info,
+			  ARRAY_SIZE(jmp_code), jmp_code,
+			  0, NULL, 0, NULL);
+
+	/* next fetch to dmseg should be in FASTDATA_AREA, check */
+	address = 0;
+
+	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_ADDRESS);
+	retval = mips_ejtag_drscan_32(ejtag_info, &address32);
+	if (retval != ERROR_OK)
+		return retval;
+	address = 0xffffffffff200000ull | address32;
+	if ((address & ~7ull) != MIPS64_PRACC_FASTDATA_AREA) {
+		LOG_ERROR("! @MIPS64_PRACC_FASTDATA_AREA (" TARGET_ADDR_FMT ")", address);
+		return ERROR_FAIL;
+	}
+	/* Send the load start address */
+	val = addr;
+	LOG_DEBUG("start: " TARGET_ADDR_FMT, val);
+	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_FASTDATA);
+	mips64_ejtag_fastdata_scan(ejtag_info, 1, &val);
+
+	retval = wait_for_pracc_rw(ejtag_info, &ejtag_ctrl);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Send the load end address */
+	val = addr + (count - 1) * 8;
+	LOG_DEBUG("stop: " TARGET_ADDR_FMT, val);
+	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_FASTDATA);
+	mips64_ejtag_fastdata_scan(ejtag_info, 1, &val);
+
+	unsigned num_clocks = 0;	/* like in legacy code */
+	if (ejtag_info->mode != 0)
+		num_clocks = ((uint64_t)(ejtag_info->scan_delay) * jtag_get_speed_khz() + 500000) / 1000000;
+	LOG_DEBUG("num_clocks=%d", num_clocks);
+	for (i = 0; i < count; i++) {
+		jtag_add_clocks(num_clocks);
+		retval = mips64_ejtag_fastdata_scan(ejtag_info, write_t, buf++);
+		if (retval != ERROR_OK) {
+			LOG_ERROR("mips64_ejtag_fastdata_scan failed");
+			return retval;
+		}
+	}
+
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
+		LOG_ERROR("jtag_execute_queue failed");
+		return retval;
+	}
+
+	retval = wait_for_pracc_rw(ejtag_info, &ejtag_ctrl);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("wait_for_pracc_rw failed");
+		return retval;
+	}
+
+	address = 0;
+	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_ADDRESS);
+	retval = mips_ejtag_drscan_32(ejtag_info, &address32);
+	if (retval != ERROR_OK) {
+		LOG_ERROR("mips_ejtag_drscan_32 failed");
+		return retval;
+	}
+
+	address = 0xffffffffff200000ull | address32;
+	if ((address & ~7ull) != MIPS64_PRACC_TEXT)
+		LOG_ERROR("mini program did not return to start");
+
+	return retval;
+}
+
 #endif /* BUILD_TARGET64 */

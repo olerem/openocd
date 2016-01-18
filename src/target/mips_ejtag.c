@@ -458,7 +458,6 @@ int mips_ejtag_fastdata_scan(struct mips_ejtag *ejtag_info, int write_t, uint32_
 	return ERROR_OK;
 }
 
-
 #if BUILD_TARGET64 == 1
 
 int mips64_ejtag_config_step(struct mips_ejtag *ejtag_info, bool enable_step)
@@ -528,6 +527,42 @@ int mips64_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
 	LOG_DEBUG("enter mips64_pracc_exec");
 	return mips64_pracc_exec(ejtag_info,
 				 ARRAY_SIZE(code), code, 0, NULL, 0, NULL);
+}
+
+int mips64_ejtag_fastdata_scan(struct mips_ejtag *ejtag_info, bool write_t, uint64_t *data)
+{
+	struct jtag_tap *tap;
+
+	tap = ejtag_info->tap;
+	assert(tap != NULL);
+
+	struct scan_field fields[2];
+	uint8_t spracc = 0;
+	uint8_t t[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+	/* fastdata 1-bit register */
+	fields[0].num_bits = 1;
+	fields[0].out_value = &spracc;
+	fields[0].in_value = NULL;
+
+	/* processor access data register 64 bit */
+	fields[1].num_bits = 64;
+	fields[1].out_value = t;
+
+	if (write_t) {
+		fields[1].in_value = NULL;
+		buf_set_u64(t, 0, 64, *data);
+	} else
+		fields[1].in_value = (uint8_t *) data;
+
+	jtag_add_dr_scan(tap, 2, fields, TAP_IDLE);
+
+	if (!write_t && data)
+		jtag_add_callback(mips_le_to_h_u64,
+			(jtag_callback_data_t) data);
+	keep_alive();
+
+	return ERROR_OK;
 }
 
 #endif /* BUILD_TARGET64 */

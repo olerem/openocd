@@ -99,6 +99,8 @@ struct mips64_common {
 	struct mips_ejtag ejtag_info;
 	uint64_t core_regs[MIPS64_NUM_REGS];
 
+	struct working_area *fast_data_area;
+
 	bool bp_scanned;
 	int num_inst_bpoints;
 	int num_data_bpoints;

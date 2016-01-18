@@ -432,6 +432,8 @@ int mips64_init_arch_info(struct target *target, struct mips64_common *mips64, s
 	mips64->read_core_reg = mips64_read_core_reg;
 	mips64->write_core_reg = mips64_write_core_reg;
 
+	mips64->fast_data_area = NULL;
+
 	return ERROR_OK;
 }
 

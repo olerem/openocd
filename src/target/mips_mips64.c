@@ -744,6 +744,72 @@ static int mips_mips64_read_memory(struct target *target, uint64_t address,
 	return retval;
 }
 
+static int mips_mips64_bulk_write_memory(struct target *target, target_addr_t address,
+		uint32_t count, const uint8_t *buffer)
+{
+	struct mips64_common *mips64 = target->arch_info;
+	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
+	struct working_area *fast_data_area;
+	int retval;
+
+	LOG_DEBUG("address: " TARGET_ADDR_FMT ", count: 0x%8.8" PRIx32 "", address, count);
+
+	/* check alignment */
+	if (address & 0x7u)
+		return ERROR_TARGET_UNALIGNED_ACCESS;
+
+	if (mips64->fast_data_area == NULL) {
+		/* Get memory for block write handler
+		 * we preserve this area between calls and gain a speed increase
+		 * of about 3kb/sec when writing flash
+		 * this will be released/nulled by the system when the target is resumed or reset */
+		retval = target_alloc_working_area(target,
+				MIPS64_FASTDATA_HANDLER_SIZE,
+				&mips64->fast_data_area);
+		if (retval != ERROR_OK) {
+			LOG_ERROR("No working area available");
+			return retval;
+		}
+
+		/* reset fastadata state so the algo get reloaded */
+		ejtag_info->fast_access_save = -1;
+	}
+
+	fast_data_area = mips64->fast_data_area;
+
+	if (address <= fast_data_area->address + fast_data_area->size &&
+			fast_data_area->address <= address + count) {
+		LOG_ERROR("fast_data (" TARGET_ADDR_FMT ") is within write area "
+			  "(" TARGET_ADDR_FMT "-" TARGET_ADDR_FMT ").",
+			  fast_data_area->address, address, address + count);
+		LOG_ERROR("Change work-area-phys or load_image address!");
+		return ERROR_FAIL;
+	}
+
+	/* mips32_pracc_fastdata_xfer requires uint32_t in host endianness, */
+	/* but byte array represents target endianness                      */
+	uint64_t *t = NULL;
+	t = malloc(count * sizeof(uint64_t));
+	if (t == NULL) {
+		LOG_ERROR("Out of memory");
+		return ERROR_FAIL;
+	}
+
+	target_buffer_get_u64_array(target, buffer, count, t);
+
+	retval = mips64_pracc_fastdata_xfer(ejtag_info, mips64->fast_data_area,
+			true, address,
+			count, t);
+
+	if (t != NULL)
+		free(t);
+
+	if (retval != ERROR_OK)
+		LOG_ERROR("Fastdata access Failed");
+
+	return retval;
+}
+
 static int mips_mips64_write_memory(struct target *target, uint64_t address,
 	uint32_t size, uint32_t count, const uint8_t *buffer)
 {
@@ -758,6 +824,7 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
+
 	/* sanitize arguments */
 	if (((size != 8) && (size != 4) && (size != 2) && (size != 1)) || (count == 0) || !(buffer))
 		return ERROR_COMMAND_ARGUMENT_INVALID;
@@ -765,6 +832,16 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 	if (((size == 8) && (address & 0x7u)) || ((size == 4) && (address & 0x3u)) ||
 	    ((size == 2) && (address & 0x1u)))
 		return ERROR_TARGET_UNALIGNED_ACCESS;
+
+	if (size == 8 && count > 8) {
+		retval = mips_mips64_bulk_write_memory(target,
+			address,
+			count,
+			buffer);
+		if (retval == ERROR_OK)
+			return ERROR_OK;
+		LOG_WARNING("Falling back to non-bulk write");
+	}
 
 	void *t = NULL;
 	if (size > 1) {
