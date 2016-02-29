@@ -66,7 +66,6 @@ int mips_common_handle_target_request(void *priv)
 	int retval = ERROR_OK;
 	struct scan_field fields;
 	tap_state_t endstate;
-	int num_fields;
 	struct target *target = priv;
 	void *t = malloc(5);
 	void *r = malloc(5);
@@ -79,14 +78,12 @@ int mips_common_handle_target_request(void *priv)
 	struct mips32_common *mips32 = target_to_mips32(target);
 	struct mips_ejtag *ejtag_info = &mips32->ejtag_info;
 	unsigned long long fdc_data = 0;
-	volatile uint64_t request_data;
 
 	if (target->state == TARGET_RUNNING) {
 
 		int i=0;
 		do {
 			const char *str = "0x2000000000";
-			request_data = 0x2000000000;
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_FDC);
 
 			endstate = TAP_IDLE;
@@ -99,11 +96,13 @@ int mips_common_handle_target_request(void *priv)
 			jtag_add_dr_scan(target->tap, 1, &fields, endstate);
 
 			retval = jtag_execute_queue();
+			if (retval != ERROR_OK)
+				return retval;
+
 			fdc_data = buf_get_u38(fields.in_value, 0, 38);
 			fdc_data &= 0x3FFFFFFFFF;
 
 			if ((((fdc_data >> 36) & 1) == 1) && (mips32->semihosting == ENABLE_SEMIHOSTING)) {
-//				LOG_INFO ("data read: %llx", fdc_data);
 				uint8_t *fdc_char = (void *) &fdc_data;
 				printf ("%0.4s", fdc_char);
 				fflush(stdout);
@@ -297,6 +296,7 @@ int mips_common_poll(struct target *target)
 		/* we have detected a reset, clear flag
 		 * otherwise ejtag will not work */
 		ejtag_ctrl = ejtag_info->ejtag_ctrl & ~EJTAG_CTRL_ROCC;
+
 		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 		retval = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
 		if (retval != ERROR_OK) {
@@ -334,7 +334,7 @@ int mips_common_poll(struct target *target)
 
 			retval = mips_common_debug_entry(target, 1);
 			if (retval != ERROR_OK) {
-				LOG_DEBUG("mips_debug_entry failed");
+				LOG_DEBUG("mips_common_debug_entry failed");
 				return retval;
 			}
 
@@ -370,9 +370,8 @@ int mips_common_poll(struct target *target)
 
 			target_call_event_callbacks(target, TARGET_EVENT_DEBUG_HALTED);
 		}
-	} else {
-			target->state = TARGET_RUNNING;
-		}
+	} else
+		target->state = TARGET_RUNNING;
 
 	return ERROR_OK;
 }
@@ -506,22 +505,30 @@ int mips_common_single_step_core(struct target *target)
 
 	/* configure single step mode */
 	int retval = mips_ejtag_config_step(ejtag_info, 1);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips_ejtag_config_step failed");
 		return retval;
+	}
 
 	/* disable interrupts while stepping */
 	retval = mips32_enable_interrupts(target, 0);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips32_enable_interrupts failed");
 		return retval;
+	}
 
 	/* exit debug mode */
 	retval = mips_ejtag_exit_debug(ejtag_info);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips_ejtag_exit_debug failed");
 		return retval;
+	}
 
 	retval = mips_common_debug_entry(target, 0);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips_common_debug_entry failed");
 		return retval;
+	}
 
 	return ERROR_OK;
 }
@@ -698,8 +705,10 @@ int mips_common_step(struct target *target, int current,
 
 	LOG_DEBUG("target stepped ");
 	int retval = mips_common_debug_entry(target, 1);
-	if (retval != ERROR_OK)
+	if (retval != ERROR_OK) {
+		LOG_DEBUG("mips_common_debug_entry failed");
 		return retval;
+	}
 
 	if (breakpoint)
 		mips_common_set_breakpoint(target, breakpoint);
@@ -949,7 +958,7 @@ int mips_common_unset_breakpoint(struct target *target,
 			/* check that user program has not modified breakpoint instruction */
 			retval = target_read_memory(target, breakpoint->address, 2, 1, (uint8_t *)&current_instr);
 			if (retval != ERROR_OK) {
-				LOG_ERROR("target_read_memory failed");
+				LOG_DEBUG("target_read_memory failed");
 				return retval;
 			}
 
@@ -957,12 +966,12 @@ int mips_common_unset_breakpoint(struct target *target,
 			if ((current_instr == MIPS16_SDBBP) || (current_instr == MICRO_MIPS_SDBBP)) {
 				retval = target_write_memory(target, breakpoint->address, 2, 1, breakpoint->orig_instr);
 				if (retval != ERROR_OK) {
-					LOG_ERROR("target_write_memory failed");
+					LOG_DEBUG("target_write_memory failed");
 					return retval;
 				}
 			} else {
 				LOG_WARNING("memory modified: no SDBBP instruction found");
-				LOG_WARNING("orignal instruction not written back to memory");
+				LOG_WARNING("original instruction not written back to memory");
 			}
 		}
 	}
