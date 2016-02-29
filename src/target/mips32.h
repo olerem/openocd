@@ -570,7 +570,9 @@ struct mips32_algorithm {
 #define C0_ERRPC		30
 #define C0_DESAVE		31
 
-#define MIPS32_OP_ADDIU 0x21
+#define MIPS32_OP_ADD 0x20
+#define MIPS32_OP_ADDU 0x21
+#define MIPS32_OP_ADDIU 0x9
 #define MIPS32_OP_ANDI	0x0C
 #define MIPS32_OP_BEQ	0x04
 #define MIPS32_OP_BGTZ	0x07
@@ -631,11 +633,11 @@ struct mips32_algorithm {
 #define MIPS32_J_INST(opcode, addr)	(((opcode) << 26) | (addr))
 
 #define MIPS32_NOP						0
-#define MIPS32_ADD(dst, src, tar)		MIPS32_R_INST(0, src, tar, dst, 0, 32)
+#define MIPS32_ADD(dst, src, tar)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_ADD)
 #define MIPS32_ADDI(tar, src, val)		MIPS32_I_INST(MIPS32_OP_ADDI, src, tar, val)
-#define MIPS32_ADDIU(tar, src, val)		MIPS32_I_INST(9, src, tar, val)
-#define MIPS32_ADDU(dst, src, tar)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_ADDIU)
-#define MIPS32_AND(reg, off, val)		MIPS32_R_INST(0, off, val, reg, 0, MIPS32_OP_AND)
+#define MIPS32_ADDIU(tar, src, val)		MIPS32_I_INST(MIPS32_OP_ADDIU, src, tar, val)
+#define MIPS32_ADDU(dst, src, tar)		MIPS32_R_INST(MIPS32_OP_SPECIAL, src, tar, dst, 0, MIPS32_OP_ADDU)
+#define MIPS32_AND(reg, off, val)		MIPS32_R_INST(MIPS32_OP_SPECIAL, off, val, reg, 0, MIPS32_OP_AND)
 #define MIPS32_ANDI(tar, src, val)		MIPS32_I_INST(MIPS32_OP_ANDI, src, tar, val)
 #define MIPS32_B(off)					MIPS32_BEQ(0, 0, off)
 #define MIPS32_BEQ(src, tar, off)		MIPS32_I_INST(MIPS32_OP_BEQ, src, tar, off)
@@ -869,9 +871,6 @@ typedef struct {
 	uint32_t numitc;					// Number of ITC cells in this processor
 	bool offchip;						// Sofware supports off-chip trace?
 	bool onchip;						// Sofware supports on-chip trace?
-	bool hwoffchip;						// CPU hardware supported off-chip trace?
-	bool hwonchip;						// CPU hardware supported on-chip trace?
-	bool iFlowtrace;					// CPU has iFlowtrace (tm)?
 	bool cbtrig;						// CPU has complex break and trigger block?
 	bool cbtrigPassCounters;			//CBT pass counters present?
 	bool cbtrigTuples;					//CBT tuples present?
