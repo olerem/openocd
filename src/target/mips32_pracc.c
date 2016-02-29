@@ -508,9 +508,8 @@ exit:
 
 int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info, uint32_t addr, int size, int count, void *buf, int cputype)
 {
-	if (count == 1 && size == 4){
+	if (count == 1 && size == 4)
 		return mips32_pracc_read_u32(ejtag_info, addr, (uint32_t *)buf);
-	}
 
 	uint32_t *data = NULL;
 	struct pracc_queue_info ctx = {.max_code = 256 * 3 + 8 + 1};	/* alloc memory for the worst case */
@@ -1089,7 +1088,7 @@ int mips32_pracc_invalidate_cache(struct target *target, struct mips_ejtag *ejta
 				pracc_add(&ctx, 0, inv_data_cache[i]);
 
 			if (cache == DATA)
-				pracc_add(&ctx, 0, MIPS32_CACHE(Hit_Writeback_Inv_D, 0, t0));
+				pracc_add(&ctx, 0, MIPS32_CACHE(Index_Writeback_Inv_D, 0, t0));
 			else {
 				if ((cache == ALLNOWB) || (cache == DATANOWB))
 					pracc_add(&ctx, 0, MIPS32_CACHE(Index_Store_Tag_D, 0, t0));
@@ -1148,13 +1147,13 @@ int mips32_pracc_write_regs(struct mips_ejtag *ejtag_info, uint32_t *regs)
 			pracc_add(&ctx, 0, MIPS32_ORI(i, i, LOWER16((regs[i]))));
 		}
 	}
-	dump = 0;
+
 	for (int i = 0; i != 6; i++) {
 		pracc_add(&ctx, 0, MIPS32_LUI(1, UPPER16((regs[i + 32]))));		/* load CPO value in $1, with lui and ori */
 		pracc_add(&ctx, 0, MIPS32_ORI(1, 1, LOWER16((regs[i + 32]))));
 		pracc_add(&ctx, 0, cp0_write_code[i]);					/* write value from $1 to CPO register */
 	}
-	dump = 0;
+
 	pracc_add(&ctx, 0, MIPS32_MTC0(15, 31, 0));				/* load $15 in DeSave */
 	pracc_add(&ctx, 0, MIPS32_LUI(1, UPPER16((regs[1]))));			/* load upper half word in $1 */
 	pracc_add(&ctx, 0, MIPS32_B(NEG16(ctx.code_count + 1)));					/* jump to start */
