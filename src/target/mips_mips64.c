@@ -43,6 +43,15 @@ static int mips_mips64_set_breakpoint(struct target *target,
 static int mips_mips64_unset_breakpoint(struct target *target,
 		struct breakpoint *breakpoint);
 
+static uint64_t mips64_extend_sign(uint64_t addr)
+{
+	if (addr >> 32)
+		return addr;
+	if (addr >> 31)
+		return addr | (ULLONG_MAX << 32);
+	return addr;
+}
+
 static int mips_mips64_examine_debug_reason(struct target *target)
 {
 	if ((target->debug_reason != DBG_REASON_DBGRQ)
@@ -242,6 +251,9 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 	struct breakpoint *breakpoint = NULL;
 	uint64_t resume_pc;
 
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
+
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted %d", target->state);
 		return ERROR_TARGET_NOT_HALTED;
@@ -305,6 +317,9 @@ static int mips_mips64_step(struct target *target, int current, uint64_t address
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
 	struct breakpoint *breakpoint = NULL;
+
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
@@ -512,6 +527,9 @@ static int mips_mips64_add_breakpoint(struct target *target, struct breakpoint *
 {
 	struct mips64_common *mips64 = target->arch_info;
 
+	if (mips64->mips64mode32)
+		breakpoint->address = mips64_extend_sign(breakpoint->address);
+
 	if (breakpoint->type == BKPT_HARD) {
 		if (mips64->num_inst_bpoints_avail < 1) {
 			LOG_INFO("no hardware breakpoint available");
@@ -687,6 +705,9 @@ static int mips_mips64_read_memory(struct target *target, uint64_t address,
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
 
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
+
 	LOG_DEBUG("address: 0x%16.16" PRIx64 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
 	if (target->state != TARGET_HALTED) {
@@ -817,6 +838,9 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
 	int retval;
 
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
+
 	LOG_DEBUG("address: 0x%16.16" PRIx64 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
 
 	if (target->state != TARGET_HALTED) {
@@ -946,6 +970,34 @@ static int mips_mips64_checksum_memory(struct target *target, uint64_t address, 
 	return ERROR_FAIL; /* use bulk read method */
 }
 
+COMMAND_HANDLER(handle_mips64mode32)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips64_common *mips64 = target->arch_info;
+
+	if (CMD_ARGC > 0)
+		COMMAND_PARSE_BOOL(CMD_ARGV[0], mips64->mips64mode32, "on", "off");
+
+	if (mips64->mips64mode32)
+		command_print(CMD, "enabled");
+	else
+		command_print(CMD, "disabled");
+
+	return ERROR_OK;
+}
+
+
+static const struct command_registration mips64_commands_handlers[] = {
+	{
+		.name = "mips64mode32",
+		.mode = COMMAND_EXEC,
+		.help = "Enable/disable 32 bit mode",
+		.usage = "[1|0]",
+		.handler = handle_mips64mode32
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
 struct target_type mips_mips64_target = {
 	.name = "mips_mips64",
 
@@ -979,6 +1031,8 @@ struct target_type mips_mips64_target = {
 	.target_create = mips_mips64_target_create,
 	.init_target = mips_mips64_init_target,
 	.examine = mips_mips64_examine,
+
+	.commands = mips64_commands_handlers,
 };
 
 #endif /* BUILD_TARGET64 */

@@ -434,6 +434,8 @@ int mips64_init_arch_info(struct target *target, struct mips64_common *mips64, s
 
 	mips64->fast_data_area = NULL;
 
+	mips64->mips64mode32 = false;
+
 	return ERROR_OK;
 }
 

@@ -112,6 +112,8 @@ struct mips64_common {
 	/* register cache to processor synchronization */
 	int (*read_core_reg)(struct target *target, int num);
 	int (*write_core_reg)(struct target *target, int num);
+
+	bool mips64mode32;
 };
 
 struct mips64_core_reg {
