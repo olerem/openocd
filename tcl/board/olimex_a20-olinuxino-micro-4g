@@ -1,0 +1,22 @@
+#
+# Olimex A20-OLinuXino-MICRO-4GB
+#
+# https://www.olimex.com/Products/OLinuXino/A20/A20-OLinuXino-MICRO-4GB/
+#
+# GPIO-2 40, RESET_N	- SRST
+# GPIO-3 32, PB17	- TDI
+# GPIO-3 30, PB16	- TDO
+# GPIO-3 28, PB15	- TCK
+# GPIO-3 26, PB14	- TMS
+# To configured by uboot you will need to add this:
+#      mw 0x01c20828 0x33000001
+#      mw 0x01c2082c 0x22000033
+
+# TODO, recheck reset config
+
+source [find target/allwinner_a20.cfg]
+
+reset_config  srst_only  srst_gates_jtag  srst_open_drain
+adapter_nsrst_assert_width 1
+adapter_nsrst_delay 200
+
