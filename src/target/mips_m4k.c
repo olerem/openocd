@@ -317,6 +317,11 @@ static int mips_m4k_assert_reset(struct target *target)
 
 	enum reset_types jtag_reset_config = jtag_get_reset_config();
 
+	if (target_has_event_action(target, TARGET_EVENT_RESET_ASSERT)) {
+		target_handle_event(target, TARGET_EVENT_RESET_ASSERT);
+		goto reset_end;
+	}
+
 	/* some cores support connecting while srst is asserted
 	 * use that mode is it has been configured */
 
@@ -363,6 +368,8 @@ static int mips_m4k_assert_reset(struct target *target)
 			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
 		}
 	}
+
+reset_end:
 
 	target->state = TARGET_RESET;
 	jtag_add_sleep(50000);
