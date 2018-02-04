@@ -362,8 +362,17 @@ static int mips_m4k_assert_reset(struct target *target)
 			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
 		} else {
 			/* use ejtag reset - not supported by all cores */
-			uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_PRRST | EJTAG_CTRL_PERRST;
-			LOG_DEBUG("Using EJTAG reset (PRRST) to reset processor...");
+			uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl;
+
+			if (mips_m4k->prrst_enabled)
+				ejtag_ctrl |= EJTAG_CTRL_PRRST;
+			else
+				LOG_WARNING("PRRST is not enabled. CPU will not be reseted");
+
+			if (mips_m4k->perrst_enabled)
+				ejtag_ctrl |= EJTAG_CTRL_PERRST;
+
+			LOG_DEBUG("Trying EJTAG reset (PRRST|PERRST) to reset SoC...");
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
 		}
@@ -1197,6 +1206,9 @@ static int mips_m4k_examine(struct target *target)
 			LOG_DEBUG("PIC32 Detected - using EJTAG Interface");
 			mips_m4k->is_pic32mx = true;
 		}
+
+		mips_m4k->prrst_enabled = true;
+		mips_m4k->perrst_enabled = true;
 	}
 
 	/* init rest of ejtag interface */
@@ -1338,6 +1350,60 @@ COMMAND_HANDLER(mips_m4k_handle_cp0_command)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(mips_m4k_handle_prrst_command)
+{
+	int retval;
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips_m4k_common *mips_m4k = target_to_m4k(target);
+
+	retval = mips_m4k_verify_pointer(CMD_CTX, mips_m4k);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (CMD_ARGC == 0) {
+		command_print(CMD_CTX, "PrRst is %s",
+			mips_m4k->prrst_enabled ? "enabled" : "disabled");
+		return ERROR_OK;
+	}
+
+	if (CMD_ARGC == 1) {
+		uint32_t set;
+
+		COMMAND_PARSE_ENABLE(CMD_ARGV[0], set);
+		mips_m4k->prrst_enabled = !!set;
+		return ERROR_OK;
+	}
+
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
+COMMAND_HANDLER(mips_m4k_handle_perrst_command)
+{
+	int retval;
+	struct target *target = get_current_target(CMD_CTX);
+	struct mips_m4k_common *mips_m4k = target_to_m4k(target);
+
+	retval = mips_m4k_verify_pointer(CMD_CTX, mips_m4k);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (CMD_ARGC == 0) {
+		command_print(CMD_CTX, "PerRst is %s",
+			mips_m4k->perrst_enabled ? "enabled" : "disabled");
+		return ERROR_OK;
+	}
+
+	if (CMD_ARGC == 1) {
+		uint32_t set;
+
+		COMMAND_PARSE_ENABLE(CMD_ARGV[0], set);
+		mips_m4k->perrst_enabled = !!set;
+		return ERROR_OK;
+	}
+
+	return ERROR_COMMAND_SYNTAX_ERROR;
+}
+
 COMMAND_HANDLER(mips_m4k_handle_smp_off_command)
 {
 	struct target *target = get_current_target(CMD_CTX);
@@ -1419,6 +1485,24 @@ COMMAND_HANDLER(mips_m4k_handle_scan_delay_command)
 	return ERROR_OK;
 }
 
+static const struct command_registration mips_m4k_ejtag_command_handlers[] = {
+	{
+		.name = "prrst",
+		.handler = mips_m4k_handle_prrst_command,
+		.mode = COMMAND_ANY,
+		.usage = "(1|0)",
+		.help = "disable or enable PrRst support",
+	},
+	{
+		.name = "perrst",
+		.handler = mips_m4k_handle_perrst_command,
+		.mode = COMMAND_ANY,
+		.usage = "(1|0)",
+		.help = "disable or enable PerRst support",
+	},
+	COMMAND_REGISTRATION_DONE
+};
+
 static const struct command_registration mips_m4k_exec_command_handlers[] = {
 	{
 		.name = "cp0",
@@ -1426,6 +1510,13 @@ static const struct command_registration mips_m4k_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.usage = "regnum [value]",
 		.help = "display/modify cp0 register",
+	},
+	{
+		.name = "ejtag",
+		.mode = COMMAND_ANY,
+		.help = "ejtag command group",
+		.usage = "",
+		.chain = mips_m4k_ejtag_command_handlers,
 	},
 	{
 		.name = "smp_off",
