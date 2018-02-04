@@ -30,6 +30,8 @@ struct target;
 
 struct mips_m4k_common {
 	uint32_t common_magic;
+	bool prrst_enabled;
+	bool perrst_enabled;
 	bool is_pic32mx;
 	struct mips32_common mips32;
 };
