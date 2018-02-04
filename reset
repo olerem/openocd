@@ -1,3 +1,9 @@
+# Obejction
+
+Current OpenOCD provide abstraction for reset handling. Currently it is
+handling all types of reset as one. This paper should collect and reflect
+common designs and stands, which can be used to improve OpenOCD reset handling
+interface.
 
 # Reset types
 
@@ -12,9 +18,37 @@
     processor." So, depending on implementation RST pin on EJTAG connector
     may reset complete board or only one (?) CPU core of one SoC.
 
+- SoC(s?) reset.
+  Some boards provide different interfaces for one SoC reset. Some boards
+  with multiple SoCs provide multiple JATG headers with multiple reset pins.
+  SoC reset is usually done with special input pin provided by SoC and handled
+  by own reset infrastructure. The reset sensitivity depends on design of
+  SoC
+
+- CPU reset.
+  Depending on design of SoC it may have SMP or AMP cores with different
+  dependencies.
+  So far following example are know:
+  - iMX7d has 2x Cortex a7 and 1x Cortex m4 CPU with complicated TAP system
+  allowing access and debug different pereferial parts including USB and DMA
+  engine. The reset state of peripheral is controlled from Cortex a7 or
+  JTAG-DMA TAP. It means, some requirements should be made to be able control
+  reset state of Cortex m4 CPU.
+  - Atheros ar9344 has only one TAP controlling CPU and less complicated
+  reset infrastructure. This SoC do not provide PrRst or PerRst It means
+  the external SoC reset will also reset complete JTAG engine. More flexible
+  CPU reset will need to have working EJTAG and JTAG-CPU access logic.
+  No other types of reset are provided by this SoC.
+
+- SoC pereferial reset
+  In most cases to reset some controller SoC provides a register set which
+  is available from CPU (or DMA if available)
+
+- more reset types?
 
 
 # Reset Sensitivity
+This example is take from MiniRISC EZ4021-FC documentation:
 				Soft				TAP Ctrl
 Module			Reset	Reset	PrRst	ERst	TRST	Reset
 CPU			yes	yes	yes	no	no	no
