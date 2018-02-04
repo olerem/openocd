@@ -64,4 +64,9 @@ EJTAG iface:
 - Protocol engine	yes	no	no	yes	yes	yes
 - Breakpoint		yes	no	no	yes	no	no
 - PC trace		yes	no	no	yes	no	no
-  
+
+# Comments
+# 2018.02.04
+PaulFertser | olerem: there were some related patches and ideas by Tomas Vanek, all posted on the mailing list.
+PaulFertser | olerem: for cortex-m: two types of reset via jtag/swd: vectreset (only the cpu core), sysresetreq (should be same as srst)
+PaulFertser | olerem: for cortex-m: srst shouldn't reset debug parts of the chip and it shouldn't prevent communication with the target. In fact many microcontroller vendor ignore the second requirement but at least the majority doensn't break the first.
