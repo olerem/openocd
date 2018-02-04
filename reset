@@ -1,0 +1,33 @@
+
+# Reset types
+
+- Board reset.
+  Comparable with power cycle. All SoCs, ROM, RAM, etc should be in
+  predictable initial state.
+  Know implementations:
+  - ARM...
+  - MIPS: optional RST pin EJTAG 14-pin connector. According to EJTAG 3.10:
+    "RST is the system reset of the target board. When the probe asserts
+    RST low, the result is either a reset (recommended) or soft reset of the
+    processor." So, depending on implementation RST pin on EJTAG connector
+    may reset complete board or only one (?) CPU core of one SoC.
+
+
+
+# Reset Sensitivity
+				Soft				TAP Ctrl
+Module			Reset	Reset	PrRst	ERst	TRST	Reset
+CPU			yes	yes	yes	no	no	no
+CP0			yes	yes	yes	no	no	no
+ICCi			yes	yes	yes	no	no	no
+DCC			yes	yes	yes	no	no	no
+BIU			yes	yes	yes	no	no	no
+MMU			yes	no	no	no	no	no
+MDU			yes	yes	yes	no	no	no
+EJTAG iface:
+- DMA/CPU Acc		yes	yes	yes	yes	yes	yes
+  logic	
+- Protocol engine	yes	no	no	yes	yes	yes
+- Breakpoint		yes	no	no	yes	no	no
+- PC trace		yes	no	no	yes	no	no
+  
