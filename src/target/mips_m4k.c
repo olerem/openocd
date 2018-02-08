@@ -279,17 +279,17 @@ static int mips_m4k_halt(struct target *target)
 		LOG_WARNING("target was in unknown state when halt was requested");
 
 	if (target->state == TARGET_RESET) {
-		if ((jtag_get_reset_config() & RESET_SRST_PULLS_TRST) && jtag_get_srst()) {
-			LOG_ERROR("can't request a halt while in reset if nSRST pulls nTRST");
-			return ERROR_TARGET_FAILURE;
-		} else {
+//		if ((jtag_get_reset_config() & RESET_SRST_PULLS_TRST) && jtag_get_srst()) {
+//			LOG_ERROR("can't request a halt while in reset if nSRST pulls nTRST");
+//			return ERROR_TARGET_FAILURE;
+//		} else {
 			/* we came here in a reset_halt or reset_init sequence
 			 * debug entry was already prepared in mips_m4k_assert_reset()
 			 */
 			target->debug_reason = DBG_REASON_DBGRQ;
 
 			return ERROR_OK;
-		}
+//		}
 	}
 
 	/* break processor */
@@ -317,10 +317,12 @@ static int mips_m4k_assert_reset(struct target *target)
 
 	enum reset_types jtag_reset_config = jtag_get_reset_config();
 
+#if 0
 	if (target_has_event_action(target, TARGET_EVENT_RESET_ASSERT)) {
 		target_handle_event(target, TARGET_EVENT_RESET_ASSERT);
 		goto reset_end;
 	}
+#endif
 
 	/* some cores support connecting while srst is asserted
 	 * use that mode is it has been configured */
@@ -361,6 +363,7 @@ static int mips_m4k_assert_reset(struct target *target)
 			mips_ejtag_drscan_8_out(ejtag_info, MCHP_DE_ASSERT_RST);
 			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
 		} else {
+#if 0
 			/* use ejtag reset - not supported by all cores */
 			uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl;
 
@@ -372,13 +375,18 @@ static int mips_m4k_assert_reset(struct target *target)
 			if (mips_m4k->perrst_enabled)
 				ejtag_ctrl |= EJTAG_CTRL_PERRST;
 
+#endif
+			if (target_has_event_action(target, TARGET_EVENT_RESET_ASSERT))
+				target_handle_event(target, TARGET_EVENT_RESET_ASSERT);
+#if 0
 			LOG_DEBUG("Trying EJTAG reset (PRRST|PERRST) to reset SoC...");
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
+#endif
 		}
 	}
 
-reset_end:
+//reset_end:
 
 	target->state = TARGET_RESET;
 	jtag_add_sleep(50000);
