@@ -30,7 +30,7 @@ interface.
   dependencies.
   So far following example are know:
   - iMX7d has 2x Cortex a7 and 1x Cortex m4 CPU with complicated TAP system
-  allowing access and debug different pereferial parts including USB and DMA
+  allowing access and debug different peripheral parts including USB and DMA
   engine. The reset state of peripheral is controlled from Cortex a7 or
   JTAG-DMA TAP. It means, some requirements should be made to be able control
   reset state of Cortex m4 CPU.
@@ -40,7 +40,7 @@ interface.
   CPU reset will need to have working EJTAG and JTAG-CPU access logic.
   No other types of reset are provided by this SoC.
 
-- SoC pereferial reset
+- SoC peripheral reset
   In most cases to reset some controller SoC provides a register set which
   is available from CPU (or DMA if available)
 
@@ -70,3 +70,10 @@ EJTAG iface:
 PaulFertser | olerem: there were some related patches and ideas by Tomas Vanek, all posted on the mailing list.
 PaulFertser | olerem: for cortex-m: two types of reset via jtag/swd: vectreset (only the cpu core), sysresetreq (should be same as srst)
 PaulFertser | olerem: for cortex-m: srst shouldn't reset debug parts of the chip and it shouldn't prevent communication with the target. In fact many microcontroller vendor ignore the second requirement but at least the majority doensn't break the first.
+PaulFertser | olerem: current reset command should be resetting core + peripherals + any external ICs that are connected to the same reset line, and nothing more.
+
+Reset sensitivitiy for Qualcomm qca4531
+- EJTAG PrRst and PerRst are not available
+- RESET_L pin, what it will reset?
+- Internal RESET register, what it will reset?
+- Watchdog, wat it will reset?
