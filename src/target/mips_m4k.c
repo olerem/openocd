@@ -345,7 +345,9 @@ static int mips_m4k_assert_reset(struct target *target)
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_NORMALBOOT);
 	}
 
-	if (jtag_reset_config & RESET_HAS_SRST) {
+	if (target_has_event_action(target, TARGET_EVENT_RESET_ASSERT)) {
+		target_handle_event(target, TARGET_EVENT_RESET_ASSERT);
+	} else if (jtag_reset_config & RESET_HAS_SRST) {
 		/* here we should issue a srst only, but we may have to assert trst as well */
 		if (jtag_reset_config & RESET_SRST_PULLS_TRST)
 			jtag_add_reset(1, 1);
