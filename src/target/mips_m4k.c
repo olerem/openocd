@@ -364,8 +364,8 @@ static int mips_m4k_assert_reset(struct target *target)
 			mips_ejtag_drscan_8_out(ejtag_info, MCHP_ASERT_RST);
 			mips_ejtag_drscan_8_out(ejtag_info, MCHP_DE_ASSERT_RST);
 			mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
+
 		} else {
-#if 0
 			/* use ejtag reset - not supported by all cores */
 			uint32_t ejtag_ctrl = ejtag_info->ejtag_ctrl;
 
@@ -376,15 +376,9 @@ static int mips_m4k_assert_reset(struct target *target)
 
 			if (mips_m4k->perrst_enabled)
 				ejtag_ctrl |= EJTAG_CTRL_PERRST;
-
-#endif
-			if (target_has_event_action(target, TARGET_EVENT_RESET_ASSERT))
-				target_handle_event(target, TARGET_EVENT_RESET_ASSERT);
-#if 0
 			LOG_DEBUG("Trying EJTAG reset (PRRST|PERRST) to reset SoC...");
 			mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 			mips_ejtag_drscan_32_out(ejtag_info, ejtag_ctrl);
-#endif
 		}
 	}
 
