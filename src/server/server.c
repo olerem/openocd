@@ -589,7 +589,7 @@ COMMAND_HANDLER(handle_shutdown_command)
 
 	shutdown_openocd = 1;
 
-	return ERROR_COMMAND_CLOSE_CONNECTION;
+	return ERROR_OK;
 }
 
 COMMAND_HANDLER(handle_poll_period_command)
