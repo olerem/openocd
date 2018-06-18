@@ -144,7 +144,7 @@
 #define EJTAG_V20_IBC_OFFS		0x4	/* IBC Offset */
 #define EJTAG_V20_IBM_OFFS		0x8
 #define EJTAG_V20_IBAn_STEP		0x10	/* Offset for next channel */
-#define EJTAG_V20_DBS			0xFF30008
+#define EJTAG_V20_DBS			0xFF300008
 #define EJTAG_V20_DBA0			0xFF300200
 #define EJTAG_V20_DBC_OFFS		0x4
 #define EJTAG_V20_DBM_OFFS		0x8
@@ -186,6 +186,7 @@ struct mips_ejtag {
 	int fast_access_save;
 	uint32_t reg8;
 	uint32_t reg9;
+	uint32_t reg10;
 	unsigned scan_delay;
 	int mode;
 	uint32_t pa_ctrl;
@@ -209,7 +210,8 @@ struct mips_ejtag {
 	uint32_t ejtag_dbasid_offs;	/* DAB ASID (4Kc) */
 
 	uint32_t ejtag_iba_step_size;
-	uint32_t ejtag_dba_step_size;	/* size of step till next *DBAn register. */
+	uint32_t ejtag_dba_step_size;	/* siez of step till next
+					 * *DBAn register. */
 };
 
 void mips_ejtag_set_instr(struct mips_ejtag *ejtag_info,
