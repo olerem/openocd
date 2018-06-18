@@ -1,3 +1,4 @@
+
 \input texinfo @c -*-texinfo-*-
 @c %**start of header
 @setfilename openocd.info
@@ -4231,6 +4232,8 @@ compact Thumb2 instruction set.
 @item @code{fa526} -- resembles arm920 (w/o Thumb)
 @item @code{feroceon} -- resembles arm926
 @item @code{mips_m4k} -- a MIPS core
+@item @code{mips_mApticv} -- a MIPS microAptiv core
+@item @code{mips_iApticv} -- a MIPS interAptiv core (with limitation)
 @item @code{xscale} -- this is actually an architecture,
 not a CPU type. It is based on the ARMv5 architecture.
 @item @code{openrisc} -- this is an OpenRISC 1000 core.
@@ -4922,7 +4925,7 @@ comamnd or the flash driver then it defaults to 0xff.
 @end deffn
 
 @anchor{program}
-@deffn Command {program} filename [verify] [reset] [exit] [offset]
+@deffn Command {program} filename [verify] [reset] [offset]
 This is a helper script that simplifies using OpenOCD as a standalone
 programmer. The only required parameter is @option{filename}, the others are optional.
 @xref{Flash Programming}.
@@ -5234,10 +5237,10 @@ supported.}
 @end deffn
 
 @deffn {Flash Driver} lpc2000
-This is the driver to support internal flash of all members of the
-LPC11(x)00 and LPC1300 microcontroller families and most members of
-the LPC800, LPC1500, LPC1700, LPC1800, LPC2000, LPC4300 and LPC54100
-microcontroller families from NXP.
+All members of the LPC11(x)00 and LPC1300 microcontroller families and most members
+of the LPC1700, LPC1800, LPC2000 and LPC4300 microcontroller families from NXP
+include internal flash and use Cortex-M0 (LPC11(x)00), Cortex-M3 (LPC1300, LPC1700,
+LPC1800), Cortex-M4 (LPC4300) or ARM7TDMI (LPC2000) cores.
 
 @quotation Note
 There are LPC2000 devices which are not supported by the @var{lpc2000}
@@ -5256,12 +5259,9 @@ which must appear in the following order:
 @option{lpc1700} (LPC175x and LPC176x)
 @option{lpc4300} - available also as @option{lpc1800} alias (LPC18x[2357] and
 LPC43x[2357])
-@option{lpc800} (LPC8xx)
 @option{lpc1100} (LPC11(x)xx and LPC13xx)
-@option{lpc1500} (LPC15xx)
-@option{lpc54100} (LPC541xx)
 or @option{auto} - automatically detects flash variant and size for LPC11(x)00,
-LPC8xx, LPC13xx and LPC17xx
+LPC1300 and LPC1700
 @item @var{clock_kHz} ... the frequency, in kiloHertz,
 at which the core is running
 @item @option{calc_checksum} ... optional (but you probably want to provide this!),
@@ -5495,10 +5495,11 @@ The @var{num} parameter is a value shown by @command{flash banks}.
 @end deffn
 
 @deffn {Flash Driver} stellaris
-All members of the Stellaris LM3Sxxx, LM4x and Tiva C microcontroller
-families from Texas Instruments include internal flash. The driver
-automatically recognizes a number of these chips using the chip
-identification register, and autoconfigures itself.
+All members of the Stellaris LM3Sxxx microcontroller family from
+Texas Instruments
+include internal flash and use ARM Cortex M3 cores.
+The driver automatically recognizes a number of these chips using
+the chip identification register, and autoconfigures itself.
 @footnote{Currently there is a @command{stellaris mass_erase} command.
 That seems pointless since the same effect can be had using the
 standard @command{flash erase_address} command.}
@@ -5859,14 +5860,6 @@ configuration registers as well. It must be noted that this command
 works only for chips that do not have factory pre-programmed region 0
 code.
 @end deffn
-
-@deffn {Flash Driver} mrvlqspi
-This driver supports QSPI flash controller of Marvell's Wireless
-Microcontroller platform.
-
-The flash size is autodetected based on the table of known JEDEC IDs
-hardcoded in the OpenOCD sources.
-@end deffn
 @end deffn
 
 @section mFlash
@@ -5938,7 +5931,7 @@ Programming can be acheived by either using GDB @ref{programmingusinggdb,,Progra
 or using the cmds given in @ref{flashprogrammingcommands,,Flash Programming Commands}.
 
 @*To simplify using the flash cmds directly a jimtcl script is available that handles the programming and verify stage.
-OpenOCD will program/verify/reset the target and optionally shutdown.
+OpenOCD will program/verify/reset the target and shutdown.
 
 The script is executed as follows and by default the following actions will be peformed.
 @enumerate
@@ -5947,7 +5940,7 @@ The script is executed as follows and by default the following actions will be p
 @item @code{flash write_image} is called to erase and write any flash using the filename given.
 @item @code{verify_image} is called if @option{verify} parameter is given.
 @item @code{reset run} is called if @option{reset} parameter is given.
-@item OpenOCD is shutdown if @option{exit} parameter is given.
+@item OpenOCD is shutdown.
 @end enumerate
 
 An example of usage is given below. @xref{program}.
@@ -5956,11 +5949,11 @@ An example of usage is given below. @xref{program}.
 # program and verify using elf/hex/s19. verify and reset
 # are optional parameters
 openocd -f board/stm32f3discovery.cfg \
-	-c "program filename.elf verify reset exit"
+	-c "program filename.elf verify reset"
 
 # binary files need the flash address passing
 openocd -f board/stm32f3discovery.cfg \
-	-c "program filename.bin exit 0x08000000"
+	-c "program filename.bin 0x08000000"
 @end example
 
 @node NAND Flash Commands
