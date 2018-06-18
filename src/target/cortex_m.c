@@ -1262,11 +1262,6 @@ int cortex_m_add_breakpoint(struct target *target, struct breakpoint *breakpoint
 		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
 	}
 
-	if (breakpoint->length == 3) {
-		LOG_DEBUG("Using a two byte breakpoint for 32bit Thumb-2 request");
-		breakpoint->length = 2;
-	}
-
 	if ((breakpoint->length != 2)) {
 		LOG_INFO("only breakpoints of two bytes length supported");
 		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
@@ -1915,9 +1910,7 @@ static int cortex_m_target_request_data(struct target *target,
 	uint32_t i;
 
 	for (i = 0; i < (size * 4); i++) {
-		int retval = cortex_m_dcc_read(target, &data, &ctrl);
-		if (retval != ERROR_OK)
-			return retval;
+		cortex_m_dcc_read(target, &data, &ctrl);
 		buffer[i] = data;
 	}
 
@@ -1936,11 +1929,8 @@ static int cortex_m_handle_target_request(void *priv)
 	if (target->state == TARGET_RUNNING) {
 		uint8_t data;
 		uint8_t ctrl;
-		int retval;
 
-		retval = cortex_m_dcc_read(target, &data, &ctrl);
-		if (retval != ERROR_OK)
-			return retval;
+		cortex_m_dcc_read(target, &data, &ctrl);
 
 		/* check if we have data */
 		if (ctrl & (1 << 0)) {
@@ -1948,12 +1938,12 @@ static int cortex_m_handle_target_request(void *priv)
 
 			/* we assume target is quick enough */
 			request = data;
-			for (int i = 1; i <= 3; i++) {
-				retval = cortex_m_dcc_read(target, &data, &ctrl);
-				if (retval != ERROR_OK)
-					return retval;
-				request |= ((uint32_t)data << (i * 8));
-			}
+			cortex_m_dcc_read(target, &data, &ctrl);
+			request |= (data << 8);
+			cortex_m_dcc_read(target, &data, &ctrl);
+			request |= (data << 16);
+			cortex_m_dcc_read(target, &data, &ctrl);
+			request |= (data << 24);
 			target_request(target, request);
 		}
 	}
