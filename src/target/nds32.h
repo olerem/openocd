@@ -362,7 +362,8 @@ struct nds32 {
 
 struct nds32_reg {
 	int32_t num;
-	uint8_t value[8];
+	uint32_t value;
+	uint64_t value_64;
 	struct target *target;
 	struct nds32 *nds32;
 	bool enable;
