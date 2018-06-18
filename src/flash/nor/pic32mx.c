@@ -403,7 +403,7 @@ static uint32_t pic32mx_flash_write_code[] = {
 	0x00000000,		/* nop */
 	0x00000000,		/* nop */
 	0x8D510000,		/* lw $s1, 0($t2) */
-	0x30113000,		/* andi $s1, $zero, 0x3000 */
+	0x32313000,		/* andi $s1, $s1, 0x3000 */
 	0x1620FFEF,		/* bne $s1, $zero, error */
 	0xAD4D0004,		/* sw $t5, 4($t2) */
 	0x03E00008,		/* jr $ra */
