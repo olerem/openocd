@@ -51,6 +51,8 @@ struct pracc_queue_info {
 	int store_count;
 	uint32_t *pracc_list;	/* Code and store addresses */
 };
+
+int mips32_pracc_invalidate_cache (struct target *, struct mips_ejtag *, uint32_t, int, int, int);
 void pracc_queue_init(struct pracc_queue_info *ctx);
 void pracc_add(struct pracc_queue_info *ctx, uint32_t addr, uint32_t instr);
 void pracc_queue_free(struct pracc_queue_info *ctx);
@@ -68,6 +70,10 @@ int mips32_pracc_read_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 int mips32_pracc_write_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 
 int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ctx, uint32_t *param_out);
+
+/* int mips32_pracc_exec(struct mips_ejtag *ejtag_info, int code_len, const uint32_t *code, */
+/*		int num_param_in, uint32_t *param_in, */
+/*		int num_param_out, uint32_t *param_out, int cycle); */
 
 /**
  * \b mips32_cp0_read
@@ -100,5 +106,8 @@ int mips32_cp0_read(struct mips_ejtag *ejtag_info,
  */
 int mips32_cp0_write(struct mips_ejtag *ejtag_info,
 		uint32_t val, uint32_t cp0_reg, uint32_t cp0_sel);
+
+int mips32_pracc_read_dsp_regs(struct mips_ejtag *ejtag_info, uint32_t *val, uint32_t regs);
+int mips32_pracc_write_dsp_regs(struct mips_ejtag *ejtag_info, uint32_t val, uint32_t regs);
 
 #endif
