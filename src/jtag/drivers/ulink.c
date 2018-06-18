@@ -1430,7 +1430,8 @@ int ulink_calculate_frequency(enum ulink_delay_type type, int delay, long *f)
 	}
 
 	f_float = 1.0 / t;
-	f_rounded = roundf(f_float);
+//	f_rounded = roundf(f_float);
+	f_rounded = round(f_float);
 	*f = (long)f_rounded;
 
 	return ERROR_OK;
