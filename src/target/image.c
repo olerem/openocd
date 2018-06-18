@@ -345,6 +345,8 @@ static int image_elf_read_headers(struct image *image)
 	int retval;
 	uint32_t nload, load_to_vaddr = 0;
 
+#define PT_NOTE    4
+
 	elf->header = malloc(sizeof(Elf32_Ehdr));
 
 	if (elf->header == NULL) {
@@ -409,12 +411,18 @@ static int image_elf_read_headers(struct image *image)
 
 	/* count useful segments (loadable), ignore BSS section */
 	image->num_sections = 0;
-	for (i = 0; i < elf->segment_count; i++)
-		if ((field32(elf,
-			elf->segments[i].p_type) == PT_LOAD) &&
+	for (i = 0; i < elf->segment_count; i++){
+		int type = (field32(elf, elf->segments[i].p_type) == PT_LOAD);
+//		if ((field32(elf,
+//			elf->segments[i].p_type) == PT_LOAD) &&
+//			(field32(elf, elf->segments[i].p_filesz) != 0))
+//			image->num_sections++;
+
+
+		if (((type == PT_LOAD) || (type == PT_NOTE)) &&
 			(field32(elf, elf->segments[i].p_filesz) != 0))
 			image->num_sections++;
-
+	}
 	assert(image->num_sections > 0);
 
 	/**
@@ -430,10 +438,18 @@ static int image_elf_read_headers(struct image *image)
 	for (nload = 0, i = 0; i < elf->segment_count; i++)
 		if (elf->segments[i].p_paddr != 0)
 			break;
-		else if ((field32(elf,
-			elf->segments[i].p_type) == PT_LOAD) &&
-			(field32(elf, elf->segments[i].p_memsz) != 0))
+//		else if ((field32(elf,
+//				 elf->segments[i].p_type) == PT_LOAD) &&
+//				 (field32(elf, elf->segments[i].p_memsz) != 0))
+//			++nload;
+
+
+		else {
+			int type = (field32(elf, elf->segments[i].p_type) == PT_LOAD);
+			if (((type == PT_LOAD) || (type == PT_NOTE)) &&
+				(field32(elf, elf->segments[i].p_filesz) != 0))
 			++nload;
+		}
 
 	if (i >= elf->segment_count && nload > 1)
 		load_to_vaddr = 1;
@@ -441,8 +457,14 @@ static int image_elf_read_headers(struct image *image)
 	/* alloc and fill sections array with loadable segments */
 	image->sections = malloc(image->num_sections * sizeof(struct imagesection));
 	for (i = 0, j = 0; i < elf->segment_count; i++) {
-		if ((field32(elf,
-			elf->segments[i].p_type) == PT_LOAD) &&
+//		if ((field32(elf,
+//			elf->segments[i].p_type) == PT_LOAD) &&
+//		   (field32(elf, elf->segments[i].p_filesz) != 0)) {
+//			image->sections[j].size = field32(elf, elf->segments[i].p_filesz);
+
+
+		int type = (field32(elf, elf->segments[i].p_type) == PT_LOAD);
+		if (((type == PT_LOAD) || (type == PT_NOTE)) &&
 			(field32(elf, elf->segments[i].p_filesz) != 0)) {
 			image->sections[j].size = field32(elf, elf->segments[i].p_filesz);
 			if (load_to_vaddr)
@@ -459,6 +481,7 @@ static int image_elf_read_headers(struct image *image)
 
 	image->start_address_set = 1;
 	image->start_address = field32(elf, elf->header->e_entry);
+	LOG_USER ("Execution start_address = 0x%x",image->start_address);
 
 	return ERROR_OK;
 }
