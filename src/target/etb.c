@@ -27,7 +27,7 @@
 #include "etb.h"
 #include "register.h"
 
-static const char * const etb_reg_list[] = {
+static char *etb_reg_list[] = {
 	"ETB_identification",
 	"ETB_ram_depth",
 	"ETB_ram_width",
