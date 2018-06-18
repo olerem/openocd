@@ -38,6 +38,7 @@ void mips_ejtag_set_instr(struct mips_ejtag *ejtag_info, int new_instr)
 	assert(tap != NULL);
 
 	if (buf_get_u32(tap->cur_instr, 0, tap->ir_length) != (uint32_t)new_instr) {
+
 		struct scan_field field;
 		uint8_t t[4];
 
@@ -75,7 +76,8 @@ int mips_ejtag_get_idcode(struct mips_ejtag *ejtag_info, uint32_t *idcode)
 	return ERROR_OK;
 }
 
-static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
+//static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
+int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impcode)
 {
 	struct scan_field field;
 	uint8_t r[4];
@@ -102,6 +104,7 @@ static int mips_ejtag_get_impcode(struct mips_ejtag *ejtag_info, uint32_t *impco
 
 void mips_ejtag_add_scan_96(struct mips_ejtag *ejtag_info, uint32_t ctrl, uint32_t data, uint8_t *in_scan_buf)
 {
+	//LOG_DEBUG("mips_ejtag_drscan_96");
 	assert(ejtag_info->tap != NULL);
 	struct jtag_tap *tap = ejtag_info->tap;
 
@@ -125,6 +128,7 @@ void mips_ejtag_add_scan_96(struct mips_ejtag *ejtag_info, uint32_t ctrl, uint32
 
 int mips_ejtag_drscan_32(struct mips_ejtag *ejtag_info, uint32_t *data)
 {
+	//LOG_DEBUG("mips_ejtag_drscan_32");
 	struct jtag_tap *tap;
 	tap  = ejtag_info->tap;
 	assert(tap != NULL);
@@ -153,8 +157,45 @@ int mips_ejtag_drscan_32(struct mips_ejtag *ejtag_info, uint32_t *data)
 	return ERROR_OK;
 }
 
+#if 0
+int mips_ejtag_drscan_38(struct mips_ejtag *ejtag_info, uint64_t *data)
+{
+	struct jtag_tap *tap;
+	tap  = ejtag_info->tap;
+
+	if (tap == NULL)
+		return ERROR_FAIL;
+
+	mips_ejtag_set_instr(ejtag_info, EJTAG_DCR_FDC);
+
+	struct scan_field field;
+
+	uint8_t t[5], r[5];
+	int retval;
+
+	field.num_bits = 38;
+	field.out_value = &t;
+	buf_set_u64(t, 0, field.num_bits, *data);
+	field.in_value = r;
+
+	jtag_add_dr_scan(tap, 1, &field, TAP_IDLE);
+	retval = jtag_execute_queue();
+	if (retval != ERROR_OK) {
+		LOG_ERROR("register read failed");
+		return retval;
+	}
+
+	*data = buf_get_u64(field.in_value, 0, 64);
+
+	keep_alive();
+
+	return ERROR_OK;
+}
+#endif
+
 void mips_ejtag_drscan_32_out(struct mips_ejtag *ejtag_info, uint32_t data)
 {
+//	LOG_DEBUG("mips_ejtag_drscan_32_out");
 	uint8_t t[4];
 	struct jtag_tap *tap;
 	tap  = ejtag_info->tap;
@@ -173,6 +214,7 @@ void mips_ejtag_drscan_32_out(struct mips_ejtag *ejtag_info, uint32_t data)
 
 int mips_ejtag_drscan_8(struct mips_ejtag *ejtag_info, uint32_t *data)
 {
+//	LOG_DEBUG("mips_ejtag_drscan_8");
 	struct jtag_tap *tap;
 	tap  = ejtag_info->tap;
 	assert(tap != NULL);
@@ -201,6 +243,7 @@ int mips_ejtag_drscan_8(struct mips_ejtag *ejtag_info, uint32_t *data)
 
 void mips_ejtag_drscan_8_out(struct mips_ejtag *ejtag_info, uint8_t data)
 {
+//	LOG_DEBUG("mips_ejtag_drscan_8_out");
 	struct jtag_tap *tap;
 	tap  = ejtag_info->tap;
 	assert(tap != NULL);
@@ -269,12 +312,14 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 
 	if (ejtag_info->ejtag_version == EJTAG_VERSION_20) {
+		LOG_INFO ("VERSION_20");
 		if (disable_dcr_mp(ejtag_info) != ERROR_OK)
 			goto error;
 	}
 
 	/* set debug break bit */
 	ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_JTAGBRK;
+	LOG_DEBUG("Set Debug Break: ejtag_ctrl: 0x%8.8" PRIx32 "", ejtag_ctrl);
 	mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
 
 	/* break bit will be cleared by hardware */
@@ -298,7 +343,7 @@ int mips_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
 	/* execute our dret instruction */
 	ctx.retval = mips32_pracc_queue_exec(ejtag_info, &ctx, NULL);
 
-	/* pic32mx workaround, false pending at low core clock */
+	/* pic32mx/mz workaround, false pending at low core clock */
 	jtag_add_sleep(1000);
 	return ctx.retval;
 }
@@ -364,7 +409,7 @@ static void ejtag_v26_print_imp(struct mips_ejtag *ejtag_info)
 		EJTAG_IMP_HAS(EJTAG_V26_IMP_DINT) ? " DINT" : "");
 }
 
-static void ejtag_main_print_imp(struct mips_ejtag *ejtag_info)
+void ejtag_main_print_imp(struct mips_ejtag *ejtag_info)
 {
 	LOG_DEBUG("EJTAG main: features:%s%s%s%s%s",
 		EJTAG_IMP_HAS(EJTAG_IMP_ASID8) ? " ASID_8" : "",
@@ -396,6 +441,7 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 	retval = mips_ejtag_get_impcode(ejtag_info, &ejtag_info->impcode);
 	if (retval != ERROR_OK)
 		return retval;
+
 	LOG_DEBUG("impcode: 0x%8.8" PRIx32 "", ejtag_info->impcode);
 
 	/* get ejtag version */
@@ -424,6 +470,7 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 			LOG_DEBUG("EJTAG: Unknown Version Detected");
 			break;
 	}
+
 	ejtag_main_print_imp(ejtag_info);
 
 	if ((ejtag_info->impcode & EJTAG_IMP_NODMA) == 0) {
@@ -434,8 +481,9 @@ int mips_ejtag_init(struct mips_ejtag *ejtag_info)
 
 	ejtag_info->ejtag_ctrl = EJTAG_CTRL_PRACC | EJTAG_CTRL_PROBEN;
 
-	if (ejtag_info->ejtag_version != EJTAG_VERSION_20)
+	if (ejtag_info->ejtag_version != EJTAG_VERSION_20) {
 		ejtag_info->ejtag_ctrl |= EJTAG_CTRL_ROCC | EJTAG_CTRL_SETDEV;
+	}
 
 	ejtag_info->fast_access_save = -1;
 
