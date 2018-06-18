@@ -51,23 +51,53 @@ struct pracc_queue_info {
 	int store_count;
 	uint32_t *pracc_list;	/* Code and store addresses */
 };
+int mips32_pracc_invalidate_cache(struct target *, struct mips_ejtag *, int cache);
 void pracc_queue_init(struct pracc_queue_info *ctx);
 void pracc_add(struct pracc_queue_info *ctx, uint32_t addr, uint32_t instr);
 void pracc_queue_free(struct pracc_queue_info *ctx);
 int mips32_pracc_queue_exec(struct mips_ejtag *ejtag_info,
-			    struct pracc_queue_info *ctx, uint32_t *buf);
+							struct pracc_queue_info *ctx, uint32_t *buf);
 
 int mips32_pracc_read_mem(struct mips_ejtag *ejtag_info,
-		uint32_t addr, int size, int count, void *buf);
+						  uint32_t addr, int size, int count, void *buf, int cputype);
 int mips32_pracc_write_mem(struct mips_ejtag *ejtag_info,
 		uint32_t addr, int size, int count, const void *buf);
 int mips32_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info, struct working_area *source,
 		int write_t, uint32_t addr, int count, uint32_t *buf);
 
+int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ctx, uint32_t *param_out);
+
 int mips32_pracc_read_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
+
+int mips32_pracc_read_tlb_entry(struct mips_ejtag *ejtag_info, uint32_t *data, uint32_t index);
+
+/**
+ * \b mips32_read_fpu_regs
+ *
+ * Simulates mfc1 ASM instruction (Move From COP1),
+ * i.e. implements copro C1 Register read.
+ *
+ * @param[in] ejtag_info
+ * @param[in] val Storage to hold read fpu value
+ *
+ * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
+ */
+int mips32_pracc_read_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
+
 int mips32_pracc_write_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 
-int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ctx, uint32_t *param_out);
+/**
+ * \b mips32_write_fpu_regs
+ *
+ * Simulates mfc1 ASM instruction (Move to COP1),
+ * i.e. implements copro C1 Register write.
+ *
+ * @param[in] ejtag_info
+ * @param[in] pointers to Stored fpu registers values
+ *
+ * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
+ */
+int mips32_pracc_write_fpu_regs(struct mips_ejtag *ejtag_info, uint32_t *regs);
 
 /**
  * \b mips32_cp0_read
@@ -82,7 +112,7 @@ int mips32_pracc_exec(struct mips_ejtag *ejtag_info, struct pracc_queue_info *ct
  *
  * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
  */
-int mips32_cp0_read(struct mips_ejtag *ejtag_info,
+int mips32_pracc_cp0_read(struct mips_ejtag *ejtag_info,
 		uint32_t *val, uint32_t cp0_reg, uint32_t cp0_sel);
 
 /**
@@ -98,7 +128,38 @@ int mips32_cp0_read(struct mips_ejtag *ejtag_info,
  *
  * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
  */
-int mips32_cp0_write(struct mips_ejtag *ejtag_info,
-		uint32_t val, uint32_t cp0_reg, uint32_t cp0_sel);
+int mips32_pracc_cp0_write(struct mips_ejtag *ejtag_info,
+					 uint32_t val, uint32_t cp0_reg, uint32_t cp0_sel);
 
+/**
+ * \b mips32_dsp_read
+ *
+ * Simulates mfc0 ASM instruction (Move From C0),
+ * i.e. implements copro C0 Register read.
+ *
+ * @param[in] ejtag_info
+ * @param[in] val Storage to hold read value
+ * @param[in] cp0_reg Number of copro C0 register we want to read
+ * @param[in] cp0_sel Select for the given C0 register
+ *
+ * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
+ */
+int mips32_pracc_read_dsp_regs(struct mips_ejtag *ejtag_info,
+							   uint32_t *val, uint32_t regs);
+
+/**
+ * \b mips32_dsp_write
+ *
+ * Simulates mtc0 ASM instruction (Move To C0),
+ * i.e. implements copro C0 Register write.
+ *
+ * @param[in] ejtag_info
+ * @param[in] val Value to be written
+ * @param[in] cp0_reg Number of copro C0 register we want to write to
+ * @param[in] cp0_sel Select for the given C0 register
+ *
+ * @return ERROR_OK on Sucess, ERROR_FAIL otherwise
+ */
+int mips32_pracc_write_dsp_regs(struct mips_ejtag *ejtag_info,
+								uint32_t val, uint32_t regs);
 #endif
