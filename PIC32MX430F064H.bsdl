@@ -1,0 +1,389 @@
+-------------------------------------------------------------------------
+--                                                                     --
+-- Copyright Microchip Technology Inc. 2008.  All rights reserved.     --
+--                                                                     --
+--                                                                     --
+--                         IMPORTANT NOTICE                            --
+--                                                                     --
+--                                                                     --
+-- Software License Agreement                                          --
+--                                                                     --
+-- The software supplied herewith by Microchip Technology Incorporated --
+-- (the Company) for its PICmicro Microcontroller is intended and      --
+-- supplied to you, the Company customer, for use solely and           --
+-- exclusively on Microchip PICmicro Microcontroller products. The     --
+-- software is owned by the Company and/or its supplier, and is        --
+-- protected under applicable copyright laws. All rights are reserved. --
+-- Any use in violation of the foregoing restrictions may subject the  --
+-- user to criminal sanctions under applicable laws, as well as to     --
+-- civil liability for the breach of the terms and conditions of this  --
+-- license.                                                            --
+--                                                                     --
+-- THIS SOFTWARE IS PROVIDED IN AN AS IS CONDITION. NO WARRANTIES,     --
+-- WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED   --
+-- TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A         --
+-- PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,   --
+-- IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR          --
+-- CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.                   --
+-------------------------------------------------------------------------
+
+-- BSDL file
+
+-- File Name:     PIC32MX430F064H.bsdl
+-- File Revision: Revision: 1.1 
+-- Date created:  Date: Friday, July, 27 ,2012  
+-- Support:       
+
+-- Device:        PIC32MX430F064H
+--                rev 0001
+-- Package:       64 pin TQFP 
+
+
+-- Notes:
+--      1. The behavior of the Oscillator Boundary Scan cells are dependant
+--    on the Oscillator Fuse settings, and therefore caution must be used
+--    when controlling the the BSC's on RC12(PIN63) and RC15(PIN64).
+
+-- ***********************************************************************
+-- *                             PORT DEFINITIONS                        *
+-- ***********************************************************************
+ entity PIC32MX430F064H is 
+
+    generic(PHYSICAL_PIN_MAP : string := "TQFP64"); 
+
+    port (
+       RB0         :     inout      bit; 
+       RB1         :     inout      bit; 
+       RB14        :     inout      bit; 
+       RB15        :     inout      bit; 
+       RB2         :     inout      bit; 
+       RB3         :     inout      bit; 
+       RB4         :     inout      bit; 
+       RB5         :     inout      bit; 
+       RB6         :     inout      bit; 
+       RB7         :     inout      bit; 
+       RB8         :     inout      bit; 
+       RB9         :     inout      bit; 
+       RD8         :     inout      bit; 
+       RD9         :     inout      bit; 
+       RD10        :     inout      bit; 
+       RD11        :     inout      bit; 
+       RD0         :     inout      bit; 
+       RD1         :     inout      bit; 
+       RD2         :     inout      bit; 
+       RD3         :     inout      bit; 
+       RD4         :     inout      bit; 
+       VREG        :   linkage      bit; 
+       MCLR        :        in      bit; 
+       RC12        :     inout      bit; 
+       RC15        :     inout      bit; 
+       RD6         :     inout      bit; 
+       RD7         :     inout      bit; 
+       RF0         :     inout      bit; 
+       RF1         :     inout      bit; 
+       RE0         :     inout      bit; 
+       RE1         :     inout      bit; 
+       RE2         :     inout      bit; 
+       RE3         :     inout      bit; 
+       RE4         :     inout      bit; 
+       RE5         :     inout      bit; 
+       RE6         :     inout      bit; 
+       RE7         :     inout      bit; 
+       RD5         :     inout      bit; 
+       RG6         :     inout      bit; 
+       RG7         :     inout      bit; 
+       RG8         :     inout      bit; 
+       RC13        :     inout      bit; 
+       RC14        :     inout      bit; 
+       RG9         :     inout      bit; 
+       RF3         :     inout      bit; 
+       RF4         :     inout      bit; 
+       RF5         :     inout      bit; 
+       VBUS        :     inout      bit; 
+       USBDM       :     inout      bit; 
+       USBDP       :     inout      bit; 
+       TDI         :        in      bit; 
+       TMS         :        in      bit; 
+       TCK         :        in      bit; 
+       TDO         :       out      bit; 
+       VUSB        :   linkage      bit; 
+       VSS2        :   linkage      bit; 
+       VSS3        :   linkage      bit; 
+       VSS5        :   linkage      bit; 
+       AVSS        :   linkage      bit; 
+       VDDCORE     :   linkage      bit; 
+       AVDD        :   linkage      bit; 
+       VDD2        :   linkage      bit; 
+       VDD3        :   linkage      bit; 
+       VDD5        :   linkage       bit 
+       );                                
+
+    use STD_1149_1_2001.all; -- Get IEEE 1149.1-2001 attributes and definitions 
+
+    attribute COMPONENT_CONFORMANCE of PIC32MX430F064H : entity is "STD_1149_1_2001";
+
+    attribute PIN_MAP of PIC32MX430F064H : entity is PHYSICAL_PIN_MAP; 
+
+    constant TQFP64 : PIN_MAP_STRING := 
+       " RE5      :        1 ," & 
+       " RE6      :        2 ," & 
+       " RE7      :        3 ," & 
+       " RG6      :        4 ," & 
+       " RG7      :        5 ," & 
+       " RG8      :        6 ," & 
+       " MCLR     :        7 ," & 
+       " RG9      :        8 ," & 
+       " VSS2     :        9 ," & 
+       " VDD2     :       10 ," & 
+       " RB5      :       11 ," & 
+       " RB4      :       12 ," & 
+       " RB3      :       13 ," & 
+       " RB2      :       14 ," & 
+       " RB1      :       15 ," & 
+       " RB0      :       16 ," & 
+       " RB6      :       17 ," & 
+       " RB7      :       18 ," & 
+       " AVDD     :       19 ," & 
+       " AVSS     :       20 ," & 
+       " RB8      :       21 ," & 
+       " RB9      :       22 ," & 
+       " TMS      :       23 ," & 
+       " TDO      :       24 ," & 
+       " VSS3     :       25 ," & 
+       " VDD3     :       26 ," & 
+       " TCK      :       27 ," & 
+       " TDI      :       28 ," & 
+       " RB14     :       29 ," & 
+       " RB15     :       30 ," & 
+       " RF4      :       31 ," & 
+       " RF5      :       32 ," & 
+       " RF3      :       33 ," & 
+       " VBUS     :       34 ," & 
+       " VUSB     :       35 ," & 
+       " USBDM    :       36 ," & 
+       " USBDP    :       37 ," & 
+       " VDD5     :       38 ," & 
+       " RC12     :       39 ," & 
+       " RC15     :       40 ," & 
+       " VSS5     :       41 ," & 
+       " RD8      :       42 ," & 
+       " RD9      :       43 ," & 
+       " RD10     :       44 ," & 
+       " RD11     :       45 ," & 
+       " RD0      :       46 ," & 
+       " RC13     :       47 ," & 
+       " RC14     :       48 ," & 
+       " RD1      :       49 ," & 
+       " RD2      :       50 ," & 
+       " RD3      :       51 ," & 
+       " RD4      :       52 ," & 
+       " RD5      :       53 ," & 
+       " RD6      :       54 ," & 
+       " RD7      :       55 ," & 
+       " VDDCORE  :       56 ," & 
+       " VREG     :       57 ," & 
+       " RF0      :       58 ," & 
+       " RF1      :       59 ," & 
+       " RE0      :       60 ," & 
+       " RE1      :       61 ," & 
+       " RE2      :       62 ," & 
+       " RE3      :       63 ," & 
+       " RE4      :       64 "; 
+
+-- *********************************************************************
+-- *                       IEEE 1149.1 TAP PORTS                       *
+-- *********************************************************************
+
+    attribute    TAP_SCAN_IN      of       TDI  :    signal  is true;                    
+    attribute    TAP_SCAN_MODE    of       TMS  :    signal  is true;                    
+    attribute    TAP_SCAN_OUT     of       TDO  :    signal  is true;                    
+    attribute    TAP_SCAN_CLOCK   of       TCK  :    signal  is (10.00e+06,BOTH);        
+                                                                                         
+-- *********************************************************************
+-- *                   INSTRUCTIONS AND REGISTER ACCESS                *
+-- *********************************************************************
+
+    attribute INSTRUCTION_LENGTH of PIC32MX430F064H : entity is 5;
+    attribute INSTRUCTION_OPCODE of PIC32MX430F064H : entity is 
+        "extest (00110),"  & 
+        "bypass (11111),"  & 
+        "sample (00010),"  & 
+        "preload (00010),"  & 
+        "highz (00000),"  & 
+        "idcode (00001),"  & 
+        "swtap_chip (00100),"  & 
+        "swtap (00101),"  & 
+        "mchp_cmd (00111),"  & 
+        "mchp_scan (01000)"  ; 
+
+    attribute INSTRUCTION_CAPTURE of PIC32MX430F064H : entity is "00001";
+
+
+    attribute IDCODE_REGISTER of PIC32MX430F064H : entity is 
+        "0001"                 &    -- Version Number 
+        "0101011000000010"     &    -- Part Number 
+        "00000101001"          &    -- Manufacturer ID 
+        "1";                        -- Required by IEEE 
+
+    attribute REGISTER_ACCESS of PIC32MX430F064H : entity is 
+        "BOUNDARY (extest, sample, preload), " & 
+        "DEVICE_ID (idcode), " & 
+        "BYPASS (bypass, highz, swtap_chip, swtap), " & 
+        "MCHP_CMD_REG[8] (mchp_cmd), " & 
+        "MCHP_SCAN_REG[8] (mchp_scan) " ; 
+
+-- *********************************************************************
+-- *                    BOUNDARY SCAN CELL INFORMATION                 *
+-- *********************************************************************
+
+    attribute BOUNDARY_LENGTH of PIC32MX430F064H : entity is 141;
+    attribute BOUNDARY_REGISTER of PIC32MX430F064H : entity is 
+       ---  num     cell      port  function safe [ccell disval rslt]  
+       "0   (    BC_4,      RE4,    input, X)," &    
+       "1   (    BC_1,      RE4,  output3, X, 2, 0, Z)," & 
+       "2   (    BC_2,        *,  control, 1)," &    
+       "3   (    BC_4,      RE3,    input, X)," &    
+       "4   (    BC_1,      RE3,  output3, X, 5, 0, Z)," & 
+       "5   (    BC_2,        *,  control, 1)," &    
+       "6   (    BC_4,      RE2,    input, X)," &    
+       "7   (    BC_1,      RE2,  output3, X, 8, 0, Z)," & 
+       "8   (    BC_2,        *,  control, 1)," &    
+       "9   (    BC_4,      RE1,    input, X)," &    
+       "10  (    BC_1,      RE1,  output3, X, 11, 0, Z)," & 
+       "11  (    BC_2,        *,  control, 1)," &    
+       "12  (    BC_4,      RE0,    input, X)," &    
+       "13  (    BC_1,      RE0,  output3, X, 14, 0, Z)," & 
+       "14  (    BC_2,        *,  control, 1)," &    
+       "15  (    BC_4,      RF1,    input, X)," &    
+       "16  (    BC_1,      RF1,  output3, X, 17, 0, Z)," & 
+       "17  (    BC_2,        *,  control, 1)," &    
+       "18  (    BC_4,      RF0,    input, X)," &    
+       "19  (    BC_1,      RF0,  output3, X, 20, 0, Z)," & 
+       "20  (    BC_2,        *,  control, 1)," &    
+       "21  (    BC_4,      RD7,    input, X)," &    
+       "22  (    BC_1,      RD7,  output3, X, 23, 0, Z)," & 
+       "23  (    BC_2,        *,  control, 1)," &    
+       "24  (    BC_4,      RD6,    input, X)," &    
+       "25  (    BC_1,      RD6,  output3, X, 26, 0, Z)," & 
+       "26  (    BC_2,        *,  control, 1)," &    
+       "27  (    BC_4,      RD5,    input, X)," &    
+       "28  (    BC_1,      RD5,  output3, X, 29, 0, Z)," & 
+       "29  (    BC_2,        *,  control, 1)," &    
+       "30  (    BC_4,      RD4,    input, X)," &    
+       "31  (    BC_1,      RD4,  output3, X, 32, 0, Z)," & 
+       "32  (    BC_2,        *,  control, 1)," &    
+       "33  (    BC_4,      RD3,    input, X)," &    
+       "34  (    BC_1,      RD3,  output3, X, 35, 0, Z)," & 
+       "35  (    BC_2,        *,  control, 1)," &    
+       "36  (    BC_4,      RD2,    input, X)," &    
+       "37  (    BC_1,      RD2,  output3, X, 38, 0, Z)," & 
+       "38  (    BC_2,        *,  control, 1)," &    
+       "39  (    BC_4,      RD1,    input, X)," &    
+       "40  (    BC_1,      RD1,  output3, X, 41, 0, Z)," & 
+       "41  (    BC_2,        *,  control, 1)," &    
+       "42  (    BC_4,     RC14,    input, X)," &    
+       "43  (    BC_1,     RC14,  output3, X, 44, 0, Z)," & 
+       "44  (    BC_2,        *,  control, 1)," &    
+       "45  (    BC_4,     RC13,    input, X)," &    
+       "46  (    BC_1,     RC13,  output3, X, 47, 0, Z)," & 
+       "47  (    BC_2,        *,  control, 1)," &    
+       "48  (    BC_4,      RD0,    input, X)," &    
+       "49  (    BC_1,      RD0,  output3, X, 50, 0, Z)," & 
+       "50  (    BC_2,        *,  control, 1)," &    
+       "51  (    BC_4,     RD11,    input, X)," &    
+       "52  (    BC_1,     RD11,  output3, X, 53, 0, Z)," & 
+       "53  (    BC_2,        *,  control, 1)," &    
+       "54  (    BC_4,     RD10,    input, X)," &    
+       "55  (    BC_1,     RD10,  output3, X, 56, 0, Z)," & 
+       "56  (    BC_2,        *,  control, 1)," &    
+       "57  (    BC_4,      RD9,    input, X)," &    
+       "58  (    BC_1,      RD9,  output3, X, 59, 0, Z)," & 
+       "59  (    BC_2,        *,  control, 1)," &    
+       "60  (    BC_4,      RD8,    input, X)," &    
+       "61  (    BC_1,      RD8,  output3, X, 62, 0, Z)," & 
+       "62  (    BC_2,        *,  control, 1)," &    
+       "63  (    BC_4,     RC15,    input, X)," &    
+       "64  (    BC_1,     RC15,  output3, X, 65, 0, Z)," & 
+       "65  (    BC_2,        *,  control, 1)," &    
+       "66  (    BC_4,     RC12,    input, X)," &    
+       "67  (    BC_1,     RC12,  output3, X, 68, 0, Z)," & 
+       "68  (    BC_2,        *,  control, 1)," &    
+       "69  (    BC_4,    USBDP,    input, X)," &    
+       "70  (    BC_1,    USBDP,  output3, X, 71, 0, Z)," & 
+       "71  (    BC_2,        *,  control, 1)," &    
+       "72  (    BC_4,    USBDM,    input, X)," &    
+       "73  (    BC_1,    USBDM,  output3, X, 71, 0, Z)," & 
+       "74  (    BC_4,      RF3,    input, X)," &    
+       "75  (    BC_1,      RF3,  output3, X, 76, 0, Z)," & 
+       "76  (    BC_2,        *,  control, 1)," &    
+       "77  (    BC_4,      RF5,    input, X)," &    
+       "78  (    BC_1,      RF5,  output3, X, 79, 0, Z)," & 
+       "79  (    BC_2,        *,  control, 1)," &    
+       "80  (    BC_4,      RF4,    input, X)," &    
+       "81  (    BC_1,      RF4,  output3, X, 82, 0, Z)," & 
+       "82  (    BC_2,        *,  control, 1)," &    
+       "83  (    BC_4,     RB15,    input, X)," &    
+       "84  (    BC_1,     RB15,  output3, X, 85, 0, Z)," & 
+       "85  (    BC_2,        *,  control, 1)," &    
+       "86  (    BC_4,     RB14,    input, X)," &    
+       "87  (    BC_1,     RB14,  output3, X, 88, 0, Z)," & 
+       "88  (    BC_2,        *,  control, 1)," &    
+       "89  (    BC_4,      RB9,    input, X)," &    
+       "90  (    BC_1,      RB9,  output3, X, 91, 0, Z)," & 
+       "91  (    BC_2,        *,  control, 1)," &    
+       "92  (    BC_4,      RB8,    input, X)," &    
+       "93  (    BC_1,      RB8,  output3, X, 94, 0, Z)," & 
+       "94  (    BC_2,        *,  control, 1)," &    
+       "95  (    BC_4,      RB7,    input, X)," &    
+       "96  (    BC_1,      RB7,  output3, X, 97, 0, Z)," & 
+       "97  (    BC_2,        *,  control, 1)," &    
+       "98  (    BC_4,      RB6,    input, X)," &    
+       "99  (    BC_1,      RB6,  output3, X, 100, 0, Z)," & 
+       "100 (    BC_2,        *,  control, 1)," &    
+       "101 (    BC_4,      RB0,    input, X)," &    
+       "102 (    BC_1,      RB0,  output3, X, 103, 0, Z)," & 
+       "103 (    BC_2,        *,  control, 1)," &    
+       "104 (    BC_4,      RB1,    input, X)," &    
+       "105 (    BC_1,      RB1,  output3, X, 106, 0, Z)," & 
+       "106 (    BC_2,        *,  control, 1)," &    
+       "107 (    BC_4,      RB2,    input, X)," &    
+       "108 (    BC_1,      RB2,  output3, X, 109, 0, Z)," & 
+       "109 (    BC_2,        *,  control, 1)," &    
+       "110 (    BC_4,      RB3,    input, X)," &    
+       "111 (    BC_1,      RB3,  output3, X, 112, 0, Z)," & 
+       "112 (    BC_2,        *,  control, 1)," &    
+       "113 (    BC_4,      RB4,    input, X)," &    
+       "114 (    BC_1,      RB4,  output3, X, 115, 0, Z)," & 
+       "115 (    BC_2,        *,  control, 1)," &    
+       "116 (    BC_4,      RB5,    input, X)," &    
+       "117 (    BC_1,      RB5,  output3, X, 118, 0, Z)," & 
+       "118 (    BC_2,        *,  control, 1)," &    
+       "119 (    BC_4,      RG9,    input, X)," &    
+       "120 (    BC_1,      RG9,  output3, X, 121, 0, Z)," & 
+       "121 (    BC_2,        *,  control, 1)," &    
+       "122 (    BC_4,     MCLR,    input, X)," &    
+       "123 (    BC_4,      RG8,    input, X)," &    
+       "124 (    BC_1,      RG8,  output3, X, 125, 0, Z)," & 
+       "125 (    BC_2,        *,  control, 1)," &    
+       "126 (    BC_4,      RG7,    input, X)," &    
+       "127 (    BC_1,      RG7,  output3, X, 128, 0, Z)," & 
+       "128 (    BC_2,        *,  control, 1)," &    
+       "129 (    BC_4,      RG6,    input, X)," &    
+       "130 (    BC_1,      RG6,  output3, X, 131, 0, Z)," & 
+       "131 (    BC_2,        *,  control, 1)," &    
+       "132 (    BC_4,      RE7,    input, X)," &    
+       "133 (    BC_1,      RE7,  output3, X, 134, 0, Z)," & 
+       "134 (    BC_2,        *,  control, 1)," &    
+       "135 (    BC_4,      RE6,    input, X)," &    
+       "136 (    BC_1,      RE6,  output3, X, 137, 0, Z)," & 
+       "137 (    BC_2,        *,  control, 1)," &    
+       "138 (    BC_4,      RE5,    input, X)," &    
+       "139 (    BC_1,      RE5,  output3, X, 140, 0, Z)," & 
+       "140 (    BC_2,        *,  control, 1)";     
+
+ end PIC32MX430F064H;
+
+        
+
+
+
