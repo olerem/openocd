@@ -182,15 +182,14 @@ proc get_irlen_postlen {tap} {
     foreach t $taps {
 	if {[string equal [lindex $t 1] $tap]} {
 	    set irlen [lindex $t 5]
-	    set count_postlen 1
-	} elseif {[info exists count_postlen] && [string equal [lindex $t 2] "Y"]} {
+	    break
+	} elseif {[string equal [lindex $t 2] "Y"]} {
 	   incr postlen 1
 	}
     }
     if {![info exists irlen]} {
         error "tap $tap not found"
     }
-    echo "here goes: "[list $irlen $postlen]
     return [list $irlen $postlen]
 }
 
