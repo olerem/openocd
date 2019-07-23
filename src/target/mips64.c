@@ -390,6 +390,10 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 		reg_list[i].type = &mips64_reg_type;
 
 		reg_list[i].value = calloc(1, 4);
+		if (!reg_list[i].value) {
+			LOG_ERROR("unable to allocate value");
+			goto alloc_fail;
+		}
 
 		reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
 		if (!reg_list[i].reg_data_type) {
