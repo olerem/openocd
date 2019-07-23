@@ -355,13 +355,13 @@ int mips64_build_reg_cache(struct target *target)
 		return ERROR_FAIL;
 	}
 
-	reg_list = calloc(1, sizeof(*reg_list) * MIPS64_NUM_REGS);
+	reg_list = calloc(MIPS64_NUM_REGS, sizeof(*reg_list));
 	if (!reg_list) {
 		LOG_ERROR("unable to allocate reg_list");
 		goto alloc_fail;
 	}
 
-	arch_info = calloc(1, sizeof(*arch_info) * MIPS64_NUM_REGS);
+	arch_info = calloc(MIPS64_NUM_REGS, sizeof(*arch_info));
 	if (!arch_info) {
 		LOG_ERROR("unable to allocate arch_info");
 		goto alloc_fail;
