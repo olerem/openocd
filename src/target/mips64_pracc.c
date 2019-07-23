@@ -83,7 +83,8 @@ static int mips64_pracc_exec_read(mips64_pracc_context *ctx, uint64_t address)
 	int rc;
 
 	if ((address >= MIPS64_PRACC_PARAM_IN)
-		&& (address < MIPS64_PRACC_PARAM_IN + ctx->num_iparam * MIPS64_PRACC_DATA_STEP)) {
+	    && (address < MIPS64_PRACC_PARAM_IN + ctx->num_iparam * MIPS64_PRACC_DATA_STEP)) {
+
 		offset = (address - MIPS64_PRACC_PARAM_IN) / MIPS64_PRACC_DATA_STEP;
 
 		if (offset >= MIPS64_PRACC_PARAM_IN_SIZE) {
@@ -95,20 +96,25 @@ static int mips64_pracc_exec_read(mips64_pracc_context *ctx, uint64_t address)
 			LOG_ERROR("Error: unexpected reading of input parameter");
 			return ERROR_JTAG_DEVICE_ERROR;
 		}
+
 		data = ctx->local_iparam[offset];
-		LOG_DEBUG("Reading %016llx at %016llx", (unsigned long long) data, (unsigned long long) address);
+		LOG_DEBUG("Reading %" PRIx64 " at %" PRIx64, data, address);
 
 	} else if ((address >= MIPS64_PRACC_PARAM_OUT)
-		&& (address < MIPS64_PRACC_PARAM_OUT + ctx->num_oparam * MIPS64_PRACC_DATA_STEP)) {
+		   && (address < MIPS64_PRACC_PARAM_OUT + ctx->num_oparam * MIPS64_PRACC_DATA_STEP)) {
+
 		offset = (address - MIPS64_PRACC_PARAM_OUT) / MIPS64_PRACC_DATA_STEP;
 		if (ctx->local_oparam == NULL) {
 			LOG_ERROR("Error: unexpected reading of output parameter");
 			return ERROR_JTAG_DEVICE_ERROR;
 		}
+
 		data = ctx->local_oparam[offset];
 		LOG_DEBUG("Reading %" PRIx64 " at %" PRIx64, data, address);
+
 	} else if ((address >= MIPS64_PRACC_TEXT)
-		&& (address < MIPS64_PRACC_TEXT + ctx->code_len * MIPS64_PRACC_ADDR_STEP)) {
+		   && (address < MIPS64_PRACC_TEXT + ctx->code_len * MIPS64_PRACC_ADDR_STEP)) {
+
 		offset = ((address & ~7ull) - MIPS64_PRACC_TEXT) / MIPS64_PRACC_ADDR_STEP;
 		data = (uint64_t)ctx->code[offset] << 32;
 		if (offset + 1 < ctx->code_len)
@@ -118,6 +124,7 @@ static int mips64_pracc_exec_read(mips64_pracc_context *ctx, uint64_t address)
 		LOG_DEBUG("Running commands %016llx at address %016llx",
 			(unsigned long long) data, (unsigned long long) address);
 	} else if ((address & ~7llu) == MIPS64_PRACC_STACK) {
+
 		/* load from our debug stack */
 		if (ctx->stack_offset == 0) {
 			LOG_ERROR("Error reading from stack: stack is empty");
