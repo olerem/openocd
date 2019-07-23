@@ -333,7 +333,8 @@ int mips64_arch_state(struct target *target)
 
 	LOG_USER("target halted due to %s, pc: 0x%" PRIx64 "",
 		debug_reason_name(target),
-		buf_get_u64(mips64->core_cache->reg_list[MIPS64_PC].value, 0, 64));
+		buf_get_u64(mips64->core_cache->reg_list[MIPS64_PC].value,
+			    0, 64));
 
 	return ERROR_OK;
 }
@@ -349,19 +350,39 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 	struct mips64_common *mips64 = target->arch_info;
 
 	unsigned num_regs = MIPS64_NUM_REGS;
-	struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
-	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
-	struct reg *reg_list = malloc(sizeof(struct reg) * num_regs);
-	struct mips64_core_reg *arch_info = malloc(sizeof(struct mips64_core_reg) * num_regs);
-	struct reg_feature *feature;
+	struct reg_cache **cache_p, *cache;
+	struct mips64_core_reg *arch_info = NULL;
+	struct reg_feature *feature = NULL;
+	struct reg *reg_list = NULL;
 	unsigned i;
+
+	cache = malloc(sizeof(*cache));
+	if (!cache) {
+		LOG_ERROR("unable to allocate cache");
+		return NULL;
+	}
+
+	reg_list = malloc(sizeof(struct reg) * num_regs);
+	if (!reg_list) {
+		LOG_ERROR("unable to allocate reg_list");
+		goto alloc_fail;
+	}
+
+	arch_info = malloc(sizeof(struct mips64_core_reg) * num_regs);
+	if (!arch_info) {
+		LOG_ERROR("unable to allocate arch_info");
+		goto alloc_fail;
+	}
 
 	/* Build the process context cache */
 	cache->name = "mips64 registers";
 	cache->next = NULL;
 	cache->reg_list = reg_list;
 	cache->num_regs = num_regs;
+
+	cache_p = register_get_last_cache_p(&target->reg_cache);
 	(*cache_p) = cache;
+
 	mips64->core_cache = cache;
 
 	for (i = 0; i < num_regs; i++) {
@@ -386,8 +407,10 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 			reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
 			if (reg_list[i].reg_data_type)
 				reg_list[i].reg_data_type->type = mips64_regs[i].type;
-			else
+			else {
 				LOG_ERROR("unable to allocate reg type list");
+				goto alloc_fail;
+			}
 		}
 
 		reg_list[i].dirty = 0;
@@ -401,11 +424,26 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 		if (feature) {
 			feature->name = mips64_regs[i].feature;
 			reg_list[i].feature = feature;
-		} else
+		} else {
 			LOG_ERROR("unable to allocate feature list");
+			goto alloc_fail;
+		}
 	}
 
 	return cache;
+
+alloc_fail:
+	free(cache);
+	free(arch_info);
+	free(feature);
+	for (i = 0; i < num_regs; i++) {
+		free(reg_list[i].value);
+		free(reg_list[i].reg_data_type);
+		free(reg_list[i].feature);
+	}
+	free(reg_list);
+
+	return NULL;
 }
 
 int mips64_init_arch_info(struct target *target, struct mips64_common *mips64, struct jtag_tap *tap)
