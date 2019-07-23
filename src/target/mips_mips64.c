@@ -894,9 +894,7 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 static int mips_mips64_init_target(struct command_context *cmd_ctx,
 	struct target *target)
 {
-	mips64_build_reg_cache(target);
-
-	return ERROR_OK;
+	return mips64_build_reg_cache(target);
 }
 
 static int mips_mips64_init_arch_info(struct target *target,
