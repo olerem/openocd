@@ -356,19 +356,19 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 	struct reg *reg_list = NULL;
 	unsigned i;
 
-	cache = malloc(sizeof(*cache));
+	cache = calloc(1, sizeof(*cache));
 	if (!cache) {
 		LOG_ERROR("unable to allocate cache");
 		return NULL;
 	}
 
-	reg_list = malloc(sizeof(struct reg) * num_regs);
+	reg_list = calloc(1, sizeof(struct reg) * num_regs);
 	if (!reg_list) {
 		LOG_ERROR("unable to allocate reg_list");
 		goto alloc_fail;
 	}
 
-	arch_info = malloc(sizeof(struct mips64_core_reg) * num_regs);
+	arch_info = calloc(1, sizeof(struct mips64_core_reg) * num_regs);
 	if (!arch_info) {
 		LOG_ERROR("unable to allocate arch_info");
 		goto alloc_fail;
@@ -376,7 +376,6 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 
 	/* Build the process context cache */
 	cache->name = "mips64 registers";
-	cache->next = NULL;
 	cache->reg_list = reg_list;
 	cache->num_regs = num_regs;
 
@@ -394,12 +393,10 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 
 		if (mips64_regs[i].flag == MIPS32_GDB_DUMMY_FP_REG) {
 			reg_list[i].value = mips32_gdb_dummy_fp_value;
-			reg_list[i].valid = 1;
-			reg_list[i].arch_info = NULL;
+			reg_list[i].valid = true;
 			register_init_dummy(&reg_list[i]);
 		} else {
 			reg_list[i].value = calloc(1, 4);
-			reg_list[i].valid = 0;
 			reg_list[i].type = &mips64_reg_type;
 			reg_list[i].arch_info = &arch_info[i];
 
@@ -412,21 +409,20 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 			}
 		}
 
-		reg_list[i].dirty = 0;
-
 		reg_list[i].group = mips64_regs[i].group;
 		reg_list[i].number = i;
 		reg_list[i].exist = true;
 		reg_list[i].caller_save = true;	/* gdb defaults to true */
 
-		feature = calloc(1, sizeof(struct reg_feature));
-		if (feature) {
-			feature->name = mips64_regs[i].feature;
-			reg_list[i].feature = feature;
-		} else {
+		feature = calloc(1, sizeof(*feature));
+		if (!feature) {
 			LOG_ERROR("unable to allocate feature list");
 			goto alloc_fail;
 		}
+
+		feature->name = mips64_regs[i].feature;
+		reg_list[i].feature = feature;
+
 	}
 
 	return cache;
