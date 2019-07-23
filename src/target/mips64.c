@@ -21,8 +21,6 @@
 
 #include "mips64.h"
 
-#define MIPS32_GDB_DUMMY_FP_REG 1
-
 static const struct {
 	unsigned id;
 	const char *name;
@@ -191,8 +189,6 @@ static int reg_type2size(enum reg_type type)
 	}
 }
 
-static uint8_t mips32_gdb_dummy_fp_value[] = {0, 0, 0, 0};
-
 static int mips64_get_core_reg(struct reg *reg)
 {
 	int retval;
@@ -349,7 +345,6 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
 
-	unsigned num_regs = MIPS64_NUM_REGS;
 	struct reg_cache **cache_p, *cache;
 	struct mips64_core_reg *arch_info = NULL;
 	struct reg_feature *feature = NULL;
@@ -362,13 +357,13 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 		return NULL;
 	}
 
-	reg_list = calloc(1, sizeof(struct reg) * num_regs);
+	reg_list = calloc(1, sizeof(*reg_list) * MIPS64_NUM_REGS);
 	if (!reg_list) {
 		LOG_ERROR("unable to allocate reg_list");
 		goto alloc_fail;
 	}
 
-	arch_info = calloc(1, sizeof(struct mips64_core_reg) * num_regs);
+	arch_info = calloc(1, sizeof(*arch_info) * MIPS64_NUM_REGS);
 	if (!arch_info) {
 		LOG_ERROR("unable to allocate arch_info");
 		goto alloc_fail;
@@ -377,37 +372,32 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 	/* Build the process context cache */
 	cache->name = "mips64 registers";
 	cache->reg_list = reg_list;
-	cache->num_regs = num_regs;
+	cache->num_regs = MIPS64_NUM_REGS;
 
 	cache_p = register_get_last_cache_p(&target->reg_cache);
 	(*cache_p) = cache;
 
 	mips64->core_cache = cache;
 
-	for (i = 0; i < num_regs; i++) {
+	for (i = 0; i < MIPS64_NUM_REGS; i++) {
 		arch_info[i].num = mips64_regs[i].id;
 		arch_info[i].target = target;
 		arch_info[i].mips64_common = mips64;
+
+		reg_list[i].arch_info = &arch_info[i];
 		reg_list[i].name = mips64_regs[i].name;
 		reg_list[i].size = reg_type2size(mips64_regs[i].type);
+		reg_list[i].type = &mips64_reg_type;
 
-		if (mips64_regs[i].flag == MIPS32_GDB_DUMMY_FP_REG) {
-			reg_list[i].value = mips32_gdb_dummy_fp_value;
-			reg_list[i].valid = true;
-			register_init_dummy(&reg_list[i]);
-		} else {
-			reg_list[i].value = calloc(1, 4);
-			reg_list[i].type = &mips64_reg_type;
-			reg_list[i].arch_info = &arch_info[i];
+		reg_list[i].value = calloc(1, 4);
 
-			reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
-			if (reg_list[i].reg_data_type)
-				reg_list[i].reg_data_type->type = mips64_regs[i].type;
-			else {
-				LOG_ERROR("unable to allocate reg type list");
-				goto alloc_fail;
-			}
+		reg_list[i].reg_data_type = calloc(1, sizeof(struct reg_data_type));
+		if (!reg_list[i].reg_data_type) {
+			LOG_ERROR("unable to allocate reg type list");
+			goto alloc_fail;
 		}
+
+		reg_list[i].reg_data_type->type = mips64_regs[i].type;
 
 		reg_list[i].group = mips64_regs[i].group;
 		reg_list[i].number = i;
@@ -422,7 +412,6 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 
 		feature->name = mips64_regs[i].feature;
 		reg_list[i].feature = feature;
-
 	}
 
 	return cache;
@@ -431,7 +420,7 @@ alloc_fail:
 	free(cache);
 	free(arch_info);
 	free(feature);
-	for (i = 0; i < num_regs; i++) {
+	for (i = 0; i < MIPS64_NUM_REGS; i++) {
 		free(reg_list[i].value);
 		free(reg_list[i].reg_data_type);
 		free(reg_list[i].feature);
