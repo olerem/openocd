@@ -203,7 +203,7 @@ int mips64_arch_state(struct target *target);
 int mips64_init_arch_info(struct target *target, struct mips64_common *mips64, struct jtag_tap *tap);
 int mips64_restore_context(struct target *target);
 int mips64_save_context(struct target *target);
-struct reg_cache *mips64_build_reg_cache(struct target *target);
+int mips64_build_reg_cache(struct target *target);
 int mips64_run_algorithm(struct target *target, int num_mem_params, struct mem_param *mem_params,
 	int num_reg_params, struct reg_param *reg_params,
 	target_addr_t entry_point, target_addr_t exit_point,
