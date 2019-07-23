@@ -574,23 +574,35 @@ int mips64_pracc_read_mem(struct mips_ejtag *ejtag_info, uint64_t addr,
 	return ERROR_FAIL;
 }
 
-static int mips64_pracc_write_u64(struct mips_ejtag *ejtag_info, uint64_t addr, uint64_t *buf)
+static int mips64_pracc_write_u64(struct mips_ejtag *ejtag_info, uint64_t addr,
+				  uint64_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_SD(9, 0, 15),					/* sd $9, ($15) */
-		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN)-8),  15),	/* load R8 @ param_in[1] = data */
-		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),	/* load R9 @ param_in[0] = address */
-		MIPS64_SD(8, 0, 9),					/* sd $8, 0($9) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* sd $9, ($15) */
+		MIPS64_SD(9, 0, 15),
+		/* load R8 @ param_in[1] = data */
+		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN)-8), 15),
+		/* load R9 @ param_in[0] = address */
+		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN), 15),
+		/* sd $8, 0($9) */
+		MIPS64_SD(8, 0, 9),
 		MIPS64_SYNCI(9, 0),
-		MIPS64_LD(9, 0, 15),					/* ld $9, ($15) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		/* ld $9, ($15) */
+		MIPS64_LD(9, 0, 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(13)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),					/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(13)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -617,30 +629,42 @@ static int mips64_pracc_write_mem64(struct mips_ejtag *ejtag_info,
 	int retval = ERROR_OK;
 
 	for (unsigned i = 0; i < count; i++) {
-		retval = mips64_pracc_write_u64(ejtag_info, addr + 8*i, &buf[i]);
+		retval = mips64_pracc_write_u64(ejtag_info, addr + 8 * i, &buf[i]);
 		if (retval != ERROR_OK)
 			return retval;
 	}
 	return retval;
 }
 
-static int mips64_pracc_write_u32(struct mips_ejtag *ejtag_info, uint64_t addr, uint32_t *buf)
+static int mips64_pracc_write_u32(struct mips_ejtag *ejtag_info, uint64_t addr,
+				  uint32_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_DMTC0(15, 31, 0),
+		/* move $15 to COP0 DeSave */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
+		/* $15 = MIPS64_PRACC_STACK */
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_SD(9, 0, 15),					/* sd $9, ($15) */
-		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN)-8),  15),   /* load R8 @ param_in[1] = data */
-		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R9 @ param_in[0] = address */
-		MIPS64_SW(8, 0, 9),					/* sw $8, 0($9) */
+		MIPS64_SD(8, 0, 15),
+		/* sd $8, ($15) */
+		MIPS64_SD(9, 0, 15),
+		/* sd $9, ($15) */
+		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN) - 8), 15),
+		/* load R8 @ param_in[1] = data */
+		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN), 15),
+		/* load R9 @ param_in[0] = address */
+		MIPS64_SW(8, 0, 9),
+		/* sw $8, 0($9) */
 		MIPS64_SYNCI(9, 0),
-		MIPS64_LD(9, 0, 15),					/* ld $9, ($15) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		MIPS64_LD(9, 0, 15),
+		/* ld $9, ($15) */
+		MIPS64_LD(8, 0, 15),
+		/* ld $8, ($15) */
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(13)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),					/* move COP0 DeSave to $15 */
+		MIPS64_B(NEG16(13)),
+		/* b start */
+		MIPS64_DMFC0(15, 31, 0),
+		/* move COP0 DeSave to $15 */
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -667,29 +691,41 @@ static int mips64_pracc_write_mem32(struct mips_ejtag *ejtag_info, uint64_t addr
 	int retval = ERROR_OK;
 
 	for (unsigned i = 0; i < count; i++) {
-		retval = mips64_pracc_write_u32(ejtag_info, addr + 4*i, &buf[i]);
+		retval = mips64_pracc_write_u32(ejtag_info, addr + 4 * i, &buf[i]);
 		if (retval != ERROR_OK)
 			return retval;
 	}
 	return retval;
 }
 
-static int mips64_pracc_write_u16(struct mips_ejtag *ejtag_info, uint64_t addr, uint16_t *buf)
+static int mips64_pracc_write_u16(struct mips_ejtag *ejtag_info, uint64_t addr,
+				  uint16_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_SD(9, 0, 15),					/* sd $9, ($15) */
-		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN)-8),  15),   /* load R8 @ param_in[1] = data */
-		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R9 @ param_in[0] = address */
-		MIPS64_SH(8, 0, 9),					/* sh $8, 0($9) */
-		MIPS64_LD(9, 0, 15),					/* ld $9, ($15) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* sd $9, ($15) */
+		MIPS64_SD(9, 0, 15),
+		/* load R8 @ param_in[1] = data */
+		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN) - 8), 15),
+		/* load R9 @ param_in[0] = address */
+		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN), 15),
+		/* sh $8, 0($9) */
+		MIPS64_SH(8, 0, 9),
+		/* ld $9, ($15) */
+		MIPS64_LD(9, 0, 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(12)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),					/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(12)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -715,29 +751,41 @@ static int mips64_pracc_write_mem16(struct mips_ejtag *ejtag_info,
 	int retval = ERROR_OK;
 
 	for (unsigned i = 0; i < count; i++) {
-		retval = mips64_pracc_write_u16(ejtag_info, addr + 2*i, &buf[i]);
+		retval = mips64_pracc_write_u16(ejtag_info, addr + 2 * i, &buf[i]);
 		if (retval != ERROR_OK)
 			return retval;
 	}
 	return retval;
 }
 
-static int mips64_pracc_write_u8(struct mips_ejtag *ejtag_info, uint64_t addr, uint8_t *buf)
+static int mips64_pracc_write_u8(struct mips_ejtag *ejtag_info, uint64_t addr,
+				 uint8_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_SD(9, 0, 15),					/* sd $9, ($15) */
-		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN)-8),  15),   /* load R8 @ param_in[1] = data */
-		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R9 @ param_in[0] = address */
-		MIPS64_SB(8, 0, 9),					/* sh $8, 0($9) */
-		MIPS64_LD(9, 0, 15),					/* ld $9, ($15) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* sd $9, ($15) */
+		MIPS64_SD(9, 0, 15),
+		/* load R8 @ param_in[1] = data */
+		MIPS64_LD(8, NEG16((MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN) - 8), 15),
+		/* load R9 @ param_in[0] = address */
+		MIPS64_LD(9, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN), 15),
+		/* sh $8, 0($9) */
+		MIPS64_SB(8, 0, 9),
+		/* ld $9, ($15) */
+		MIPS64_LD(9, 0, 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(12)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),					/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(12)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -791,17 +839,23 @@ int mips64_pracc_write_mem(struct mips_ejtag *ejtag_info,
 int mips64_pracc_write_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(2, 31, 0),						/* move $2 to COP0 DeSave */
-		MIPS64_LUI(2, UPPER16(MIPS64_PRACC_PARAM_IN)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $2 to COP0 DeSave */
+		MIPS64_DMTC0(2, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(2, UPPER16(MIPS64_PRACC_PARAM_IN)),
 		MIPS64_ORI(2, 2, LOWER16(MIPS64_PRACC_PARAM_IN)),
-		MIPS64_LD(1, 1*8, 2),						/* sd $0, 0*8($2) */
-		MIPS64_LD(15, 15*8, 2),					/* sd $1, 1*8($2) */
-		MIPS64_DMFC0(2, 31, 0),					/* sd $11, ($15) */
+		/* sd $0, 0*8($2) */
+		MIPS64_LD(1, 1*8, 2),
+		/* sd $1, 1*8($2) */
+		MIPS64_LD(15, 15*8, 2),
+		/* sd $11, ($15) */
+		MIPS64_DMFC0(2, 31, 0),
 		MIPS64_DMTC0(15, 31, 0),
 		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
 		MIPS64_SD(1, 0, 15),
-		MIPS64_LUI(1, UPPER16(MIPS64_PRACC_PARAM_IN)),	/* $11 = MIPS64_PRACC_PARAM_OUT */
+		/* $11 = MIPS64_PRACC_PARAM_OUT */
+		MIPS64_LUI(1, UPPER16(MIPS64_PRACC_PARAM_IN)),
 		MIPS64_ORI(1, 1, LOWER16(MIPS64_PRACC_PARAM_IN)),
 		MIPS64_LD(3, 3*8, 1),
 		MIPS64_LD(4, 4*8, 1),
@@ -887,10 +941,12 @@ int mips64_pracc_write_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 		MIPS64_DMTC0(2, MIPS64_C0_DATAHI, 0),
 		MIPS64_LD(2, (MIPS64_NUM_CORE_REGS + 33) * 8, 1),
 		MIPS64_DMTC0(2, MIPS64_C0_EEPC, 0),
-		MIPS64_MFC0(2, MIPS64_C0_STATUS, 0), /* check if FPU is enabled, */
+		/* check if FPU is enabled, */
+		MIPS64_MFC0(2, MIPS64_C0_STATUS, 0),
 		MIPS64_SRL(2, 2, 29),
 		MIPS64_ANDI(2, 2, 1),
-		MIPS64_BEQ(0, 2, 77),	/* skip FPU registers restoration if not */
+		/* skip FPU registers restoration if not */
+		MIPS64_BEQ(0, 2, 77),
 		MIPS64_NOP,
 		MIPS64_LD(2, (MIPS64_NUM_CORE_C0_REGS + 33) * 8, 1),
 		MIPS64_CTC1(2, MIPS64_C1_FIR, 0),
@@ -971,8 +1027,10 @@ int mips64_pracc_write_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 		MIPS64_LD(2, 2 * 8, 1),
 		MIPS64_LD(1, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(181)), /* b start */
-		MIPS64_DMFC0(15, 31, 0), /* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(181)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -991,53 +1049,64 @@ int mips64_pracc_write_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 int mips64_pracc_read_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(2, 31, 0),				/* move $2 to COP0 DeSave */
-		MIPS64_LUI(2, UPPER16(MIPS64_PRACC_PARAM_OUT)),	/* $2 = MIPS64_PRACC_PARAM_OUT */
+		/* move $2 to COP0 DeSave */
+		MIPS64_DMTC0(2, 31, 0),
+		/* $2 = MIPS64_PRACC_PARAM_OUT */
+		MIPS64_LUI(2, UPPER16(MIPS64_PRACC_PARAM_OUT)),
 		MIPS64_ORI(2, 2, LOWER16(MIPS64_PRACC_PARAM_OUT)),
-		MIPS64_SD(0, 0*8, 2),				/* sd $0, 0*8($2) */
-		MIPS64_SD(1, 1*8, 2),				/* sd $1, 1*8($2) */
-		MIPS64_SD(15, 15*8, 2),				/* sd $15, 15*8($2) */
-		MIPS64_DMFC0(2, 31, 0),				/* move COP0 DeSave to $2 */
-		MIPS64_DMTC0(15, 31, 0),				/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),	/* $15 = MIPS64_PRACC_STACK */
+		/* sd $0, 0*8($2) */
+		MIPS64_SD(0, 0*8, 2),
+		/* sd $1, 1*8($2) */
+		MIPS64_SD(1, 1*8, 2),
+		/* sd $15, 15*8($2) */
+		MIPS64_SD(15, 15*8, 2),
+		/* move COP0 DeSave to $2 */
+		MIPS64_DMFC0(2, 31, 0),
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(1, 0, 15),				/* sd $1, ($15) */
-		MIPS64_SD(2, 0, 15),				/* sd $2, ($15) */
-		MIPS64_LUI(1, UPPER16(MIPS64_PRACC_PARAM_OUT)),	/* $1 = MIPS64_PRACC_PARAM_OUT */
+		/* sd $1, ($15) */
+		MIPS64_SD(1, 0, 15),
+		/* sd $2, ($15) */
+		MIPS64_SD(2, 0, 15),
+		/* $1 = MIPS64_PRACC_PARAM_OUT */
+		MIPS64_LUI(1, UPPER16(MIPS64_PRACC_PARAM_OUT)),
 		MIPS64_ORI(1, 1, LOWER16(MIPS64_PRACC_PARAM_OUT)),
-		MIPS64_SD(2, 2*8, 1),
-		MIPS64_SD(3, 3*8, 1),
-		MIPS64_SD(4, 4*8, 1),
-		MIPS64_SD(5, 5*8, 1),
-		MIPS64_SD(6, 6*8, 1),
-		MIPS64_SD(7, 7*8, 1),
-		MIPS64_SD(8, 8*8, 1),
-		MIPS64_SD(9, 9*8, 1),
-		MIPS64_SD(10, 10*8, 1),
-		MIPS64_SD(11, 11*8, 1),
-		MIPS64_SD(12, 12*8, 1),
-		MIPS64_SD(13, 13*8, 1),
-		MIPS64_SD(14, 14*8, 1),
-		MIPS64_SD(16, 16*8, 1),
-		MIPS64_SD(17, 17*8, 1),
-		MIPS64_SD(18, 18*8, 1),
-		MIPS64_SD(19, 19*8, 1),
-		MIPS64_SD(20, 20*8, 1),
-		MIPS64_SD(21, 21*8, 1),
-		MIPS64_SD(22, 22*8, 1),
-		MIPS64_SD(23, 23*8, 1),
-		MIPS64_SD(24, 24*8, 1),
-		MIPS64_SD(25, 25*8, 1),
-		MIPS64_SD(26, 26*8, 1),
-		MIPS64_SD(27, 27*8, 1),
-		MIPS64_SD(28, 28*8, 1),
-		MIPS64_SD(29, 29*8, 1),
-		MIPS64_SD(30, 30*8, 1),
-		MIPS64_SD(31, 31*8, 1),
+		MIPS64_SD(2, 2 * 8, 1),
+		MIPS64_SD(3, 3 * 8, 1),
+		MIPS64_SD(4, 4 * 8, 1),
+		MIPS64_SD(5, 5 * 8, 1),
+		MIPS64_SD(6, 6 * 8, 1),
+		MIPS64_SD(7, 7 * 8, 1),
+		MIPS64_SD(8, 8 * 8, 1),
+		MIPS64_SD(9, 9 * 8, 1),
+		MIPS64_SD(10, 10 * 8, 1),
+		MIPS64_SD(11, 11 * 8, 1),
+		MIPS64_SD(12, 12 * 8, 1),
+		MIPS64_SD(13, 13 * 8, 1),
+		MIPS64_SD(14, 14 * 8, 1),
+		MIPS64_SD(16, 16 * 8, 1),
+		MIPS64_SD(17, 17 * 8, 1),
+		MIPS64_SD(18, 18 * 8, 1),
+		MIPS64_SD(19, 19 * 8, 1),
+		MIPS64_SD(20, 20 * 8, 1),
+		MIPS64_SD(21, 21 * 8, 1),
+		MIPS64_SD(22, 22 * 8, 1),
+		MIPS64_SD(23, 23 * 8, 1),
+		MIPS64_SD(24, 24 * 8, 1),
+		MIPS64_SD(25, 25 * 8, 1),
+		MIPS64_SD(26, 26 * 8, 1),
+		MIPS64_SD(27, 27 * 8, 1),
+		MIPS64_SD(28, 28 * 8, 1),
+		MIPS64_SD(29, 29 * 8, 1),
+		MIPS64_SD(30, 30 * 8, 1),
+		MIPS64_SD(31, 31 * 8, 1),
 		MIPS64_MFLO(2),
-		MIPS64_SD(2, 32*8, 1),
+		MIPS64_SD(2, 32 * 8, 1),
 		MIPS64_MFHI(2),
-		MIPS64_SD(2, 33*8, 1),
+		MIPS64_SD(2, 33 * 8, 1),
 		MIPS64_DMFC0(2, MIPS64_C0_DEPC, 0),
 		MIPS64_SD(2, MIPS64_NUM_CORE_REGS * 8, 1),
 		MIPS64_DMFC0(2, MIPS64_C0_RANDOM, 0),
@@ -1098,10 +1167,12 @@ int mips64_pracc_read_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 		MIPS64_SD(2, (MIPS64_NUM_CORE_REGS + 32) * 8, 1),
 		MIPS64_DMFC0(2, MIPS64_C0_EEPC, 0),
 		MIPS64_SD(2, (MIPS64_NUM_CORE_REGS + 33) * 8, 1),
-		MIPS64_MFC0(2, MIPS64_C0_STATUS, 0), /* check if FPU is enabled, */
+		/* check if FPU is enabled, */
+		MIPS64_MFC0(2, MIPS64_C0_STATUS, 0),
 		MIPS64_SRL(2, 2, 29),
 		MIPS64_ANDI(2, 2, 1),
-		MIPS64_BEQ(0, 2, 77),	/* skip FPU registers dump if not */
+		/* skip FPU registers dump if not */
+		MIPS64_BEQ(0, 2, 77),
 		MIPS64_NOP,
 		MIPS64_CFC1(2, MIPS64_C1_FIR, 0),
 		MIPS64_SD(2, (MIPS64_NUM_CORE_C0_REGS + 33) * 8, 1),
@@ -1182,8 +1253,10 @@ int mips64_pracc_read_regs(struct mips_ejtag *ejtag_info, uint64_t *regs)
 		MIPS64_LD(2, 0, 15),
 		MIPS64_LD(1, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(192)), /* b start */
-		MIPS64_DMFC0(15, 31, 0), /* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(192)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -1221,13 +1294,20 @@ int mips64_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info,
 		/* start of fastdata area in t0 */
 		MIPS64_LUI(8, UPPER16(MIPS64_PRACC_FASTDATA_AREA)),
 		MIPS64_ORI(8, 8, LOWER16(MIPS64_PRACC_FASTDATA_AREA)),
-		MIPS64_LD(9, 0, 8),								/* start addr in t1 */
-		MIPS64_LD(10, 0, 8),							/* end addr to t2 */
-														/* loop: */
-		/* 8 */ MIPS64_LD(11, 0, 0),					/* lw t3,[t8 | r9] */
-		/* 9 */ MIPS64_SD(11, 0, 0),					/* sw t3,[r9 | r8] */
-		MIPS64_BNE(10, 9, NEG16(3)),					/* bne $t2,t1,loop */
-		MIPS64_DADDIU(9, 9, 8),							/* addi t1,t1,4 */
+		/* start addr in t1 */
+		MIPS64_LD(9, 0, 8),
+		/* end addr to t2 */
+		MIPS64_LD(10, 0, 8),
+
+		/* loop: */
+		/* lw t3,[t8 | r9] */
+		/* 8 */ MIPS64_LD(11, 0, 0),
+		/* sw t3,[r9 | r8] */
+		/* 9 */ MIPS64_SD(11, 0, 0),
+		/* bne $t2,t1,loop */
+		MIPS64_BNE(10, 9, NEG16(3)),
+		/* addi t1,t1,4 */
+		MIPS64_DADDIU(9, 9, 8),
 
 		MIPS64_LD(8, MIPS64_FASTDATA_HANDLER_SIZE - 8, 15),
 		MIPS64_LD(9, MIPS64_FASTDATA_HANDLER_SIZE - 8 * 2, 15),
@@ -1236,14 +1316,19 @@ int mips64_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info,
 
 		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_TEXT)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_TEXT)),
-		MIPS64_JR(15),								/* jr start */
-		MIPS64_DMFC0(15, 31, 0),						/* move COP0 DeSave to $15 */
+		/* jr start */
+		MIPS64_JR(15),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 	};
 
 	uint32_t jmp_code[] = {
-		/* 0 */ MIPS64_LUI(15, 0),		/* addr of working area added below */
-		/* 1 */ MIPS64_ORI(15, 15, 0),	/* addr of working area added below */
-		MIPS64_JR(15),					/* jump to ram program */
+		/* addr of working area added below */
+		/* 0 */ MIPS64_LUI(15, 0),
+		/* addr of working area added below */
+		/* 1 */ MIPS64_ORI(15, 15, 0),
+		/* jump to ram program */
+		MIPS64_JR(15),
 		MIPS64_NOP,
 	};
 
@@ -1256,21 +1341,27 @@ int mips64_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info,
 		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
 
 	if (write_t) {
-		handler_code[8] = MIPS64_LD(11, 0, 8);	/* load data from probe at fastdata area */
-		handler_code[9] = MIPS64_SD(11, 0, 9);	/* store data to RAM @ r9 */
+		/* load data from probe at fastdata area */
+		handler_code[8] = MIPS64_LD(11, 0, 8);
+		/* store data to RAM @ r9 */
+		handler_code[9] = MIPS64_SD(11, 0, 9);
 	} else {
-		handler_code[8] = MIPS64_LD(11, 0, 9);	/* load data from RAM @ r9 */
-		handler_code[9] = MIPS64_SD(11, 0, 8);	/* store data to probe at fastdata area */
+		/* load data from RAM @ r9 */
+		handler_code[8] = MIPS64_LD(11, 0, 9);
+		/* store data to probe at fastdata area */
+		handler_code[9] = MIPS64_SD(11, 0, 8);
 	}
 
 	/* write program into RAM */
 	if (write_t != ejtag_info->fast_access_save) {
-		mips64_pracc_write_mem(ejtag_info, source->address, 4, ARRAY_SIZE(handler_code), handler_code);
+		mips64_pracc_write_mem(ejtag_info, source->address, 4,
+				       ARRAY_SIZE(handler_code), handler_code);
 		/* save previous operation to speed to any consecutive read/writes */
 		ejtag_info->fast_access_save = write_t;
 	}
 
-	LOG_DEBUG("%s using " TARGET_ADDR_FMT " for write handler", __func__, source->address);
+	LOG_DEBUG("%s using " TARGET_ADDR_FMT " for write handler", __func__,
+		  source->address);
 	LOG_DEBUG("daddiu: %08x", handler_code[11]);
 
 	jmp_code[0] |= UPPER16(source->address);
@@ -1307,7 +1398,8 @@ int mips64_pracc_fastdata_xfer(struct mips_ejtag *ejtag_info,
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_FASTDATA);
 	mips64_ejtag_fastdata_scan(ejtag_info, 1, &val);
 
-	unsigned num_clocks = 0;	/* like in legacy code */
+	/* like in legacy code */
+	unsigned num_clocks = 0;
 	if (ejtag_info->mode != 0)
 		num_clocks = ((uint64_t)(ejtag_info->scan_delay) * jtag_get_speed_khz() + 500000) / 1000000;
 	LOG_DEBUG("num_clocks=%d", num_clocks);
