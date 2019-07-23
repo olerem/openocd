@@ -120,9 +120,9 @@ static int mips64_pracc_exec_read(mips64_pracc_context *ctx, uint64_t address)
 		if (offset + 1 < ctx->code_len)
 			data |= (uint64_t)ctx->code[offset + 1];
 
+		LOG_DEBUG("Running commands %" PRIx64 " at %" PRIx64, data,
+			  address);
 
-		LOG_DEBUG("Running commands %016llx at address %016llx",
-			(unsigned long long) data, (unsigned long long) address);
 	} else if ((address & ~7llu) == MIPS64_PRACC_STACK) {
 
 		/* load from our debug stack */
@@ -130,14 +130,16 @@ static int mips64_pracc_exec_read(mips64_pracc_context *ctx, uint64_t address)
 			LOG_ERROR("Error reading from stack: stack is empty");
 			return ERROR_JTAG_DEVICE_ERROR;
 		}
+
 		data = ctx->stack[--ctx->stack_offset];
-		LOG_DEBUG("Reading %llx at %llx", (unsigned long long) data, (unsigned long long) address);
+		LOG_DEBUG("Reading %" PRIx64 " at %" PRIx64, data, address);
+
 	} else {
 		/* TODO: send JMP 0xFF200000 instruction. Hopefully processor jump back
 		 * to start of debug vector */
 
 		data = 0;
-		LOG_ERROR("Error reading unexpected address %016llx", (unsigned long long) address);
+		LOG_ERROR("Error reading unexpected address %" PRIx64, address);
 		return ERROR_JTAG_DEVICE_ERROR;
 	}
 
@@ -185,7 +187,7 @@ static int mips64_pracc_exec_write(mips64_pracc_context *ctx, uint64_t address)
 	if (rc != ERROR_OK)
 		return rc;
 
-	LOG_DEBUG("Writing %016llx at %016llx\n", (unsigned long long) data, (unsigned long long) address);
+	LOG_DEBUG("Writing %" PRIx64 " at %" PRIx64, data, address);
 
 	if ((address >= MIPS64_PRACC_PARAM_IN)
 		&& (address < MIPS64_PRACC_PARAM_IN + ctx->num_iparam * MIPS64_PRACC_DATA_STEP)) {
@@ -211,7 +213,7 @@ static int mips64_pracc_exec_write(mips64_pracc_context *ctx, uint64_t address)
 		}
 		ctx->stack[ctx->stack_offset++] = data;
 	} else {
-		LOG_ERROR("Error writing unexpected address 0x%" PRIx64 "", address);
+		LOG_ERROR("Error writing unexpected address 0x%" PRIx64, address);
 		return ERROR_JTAG_DEVICE_ERROR;
 	}
 
@@ -321,20 +323,30 @@ int mips64_pracc_exec(struct mips_ejtag *ejtag_info,
 	return ERROR_OK;
 }
 
-static int mips64_pracc_read_u64(struct mips_ejtag *ejtag_info, uint64_t addr, uint64_t *buf)
+static int mips64_pracc_read_u64(struct mips_ejtag *ejtag_info, uint64_t addr,
+				 uint64_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R8 @ param_in[0] = address */
-		MIPS64_LD(8, 0, 8),					/* ld $8, 0($8),  Load $8 with the word @mem[$8] */
-		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),	/* sd $8, 0($15) */
-		MIPS64_LD(8, 0, 15),				/* ld $8, ($15) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* load R8 @ param_in[0] = address */
+		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),
+		/* ld $8, 0($8),  Load $8 with the word @mem[$8] */
+		MIPS64_LD(8, 0, 8),
+		/* sd $8, 0($15) */
+		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(10)),				/* b start */
-		MIPS64_DMFC0(15, 31, 0),				/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(10)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -366,20 +378,30 @@ static int mips64_pracc_read_mem64(struct mips_ejtag *ejtag_info, uint64_t addr,
 	return retval;
 }
 
-static int mips64_pracc_read_u32(struct mips_ejtag *ejtag_info, uint64_t addr, uint32_t *buf)
+static int mips64_pracc_read_u32(struct mips_ejtag *ejtag_info, uint64_t addr,
+				 uint32_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R8 @ param_in[0] = address */
-		MIPS64_LW(8, 0, 8),					/* lw $8, 0($8),  Load $8 with the word @mem[$8] */
-		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),	/* sd $8, 0($9) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* load R8 @ param_in[0] = address */
+		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),
+		/* lw $8, 0($8),  Load $8 with the word @mem[$8] */
+		MIPS64_LW(8, 0, 8),
+		/* sd $8, 0($9) */
+		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(10)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),				/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(10)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -403,7 +425,8 @@ static int mips64_pracc_read_u32(struct mips_ejtag *ejtag_info, uint64_t addr, u
 	return retval;
 }
 
-static int mips64_pracc_read_mem32(struct mips_ejtag *ejtag_info, uint64_t addr, unsigned count, uint32_t *buf)
+static int mips64_pracc_read_mem32(struct mips_ejtag *ejtag_info, uint64_t addr,
+				   unsigned count, uint32_t *buf)
 {
 	int retval = ERROR_OK;
 
@@ -418,17 +441,26 @@ static int mips64_pracc_read_mem32(struct mips_ejtag *ejtag_info, uint64_t addr,
 static int mips64_pracc_read_u16(struct mips_ejtag *ejtag_info, uint64_t addr, uint16_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R8 @ param_in[0] = address */
-		MIPS64_LHU(8, 0, 8),					/* lw $8, 0($8),  Load $8 with the word @mem[$8] */
-		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),	/* sd $8, 0($9) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* load R8 @ param_in[0] = address */
+		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),
+		/* lw $8, 0($8),  Load $8 with the word @mem[$8] */
+		MIPS64_LHU(8, 0, 8),
+		/* sd $8, 0($9) */
+		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(10)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),				/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(10)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
