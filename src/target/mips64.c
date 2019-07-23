@@ -340,7 +340,7 @@ static const struct reg_arch_type mips64_reg_type = {
 	.set = mips64_set_core_reg,
 };
 
-struct reg_cache *mips64_build_reg_cache(struct target *target)
+int mips64_build_reg_cache(struct target *target)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
@@ -353,7 +353,7 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 	cache = calloc(1, sizeof(*cache));
 	if (!cache) {
 		LOG_ERROR("unable to allocate cache");
-		return NULL;
+		return ERROR_FAIL;
 	}
 
 	reg_list = calloc(1, sizeof(*reg_list) * MIPS64_NUM_REGS);
@@ -419,7 +419,7 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 
 	mips64->core_cache = cache;
 
-	return cache;
+	return ERROR_OK;
 
 alloc_fail:
 	free(cache);
@@ -432,7 +432,7 @@ alloc_fail:
 	}
 	free(reg_list);
 
-	return NULL;
+	return ERROR_FAIL;
 }
 
 int mips64_init_arch_info(struct target *target, struct mips64_common *mips64, struct jtag_tap *tap)
