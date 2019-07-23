@@ -438,7 +438,8 @@ static int mips64_pracc_read_mem32(struct mips_ejtag *ejtag_info, uint64_t addr,
 	return retval;
 }
 
-static int mips64_pracc_read_u16(struct mips_ejtag *ejtag_info, uint64_t addr, uint16_t *buf)
+static int mips64_pracc_read_u16(struct mips_ejtag *ejtag_info, uint64_t addr,
+				 uint16_t *buf)
 {
 	const uint32_t code[] = {
 		/* move $15 to COP0 DeSave */
@@ -497,20 +498,30 @@ static int mips64_pracc_read_mem16(struct mips_ejtag *ejtag_info, uint64_t addr,
 	return retval;
 }
 
-static int mips64_pracc_read_u8(struct mips_ejtag *ejtag_info, uint64_t addr, uint8_t *buf)
+static int mips64_pracc_read_u8(struct mips_ejtag *ejtag_info, uint64_t addr,
+				uint8_t *buf)
 {
 	const uint32_t code[] = {
-		MIPS64_DMTC0(15, 31, 0),					/* move $15 to COP0 DeSave */
-		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),		/* $15 = MIPS64_PRACC_STACK */
+		/* move $15 to COP0 DeSave */
+		MIPS64_DMTC0(15, 31, 0),
+		/* $15 = MIPS64_PRACC_STACK */
+		MIPS64_LUI(15, UPPER16(MIPS64_PRACC_STACK)),
 		MIPS64_ORI(15, 15, LOWER16(MIPS64_PRACC_STACK)),
-		MIPS64_SD(8, 0, 15),					/* sd $8, ($15) */
-		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),   /* load R8 @ param_in[0] = address */
-		MIPS64_LBU(8, 0, 8),					/* lw $8, 0($8),  Load $8 with the word @mem[$8] */
-		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),	/* sd $8, 0($9) */
-		MIPS64_LD(8, 0, 15),					/* ld $8, ($15) */
+		/* sd $8, ($15) */
+		MIPS64_SD(8, 0, 15),
+		/* load R8 @ param_in[0] = address */
+		MIPS64_LD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_IN),  15),
+		/* lw $8, 0($8),  Load $8 with the word @mem[$8] */
+		MIPS64_LBU(8, 0, 8),
+		/* sd $8, 0($9) */
+		MIPS64_SD(8, NEG16(MIPS64_PRACC_STACK-MIPS64_PRACC_PARAM_OUT), 15),
+		/* ld $8, ($15) */
+		MIPS64_LD(8, 0, 15),
 		MIPS64_SYNC,
-		MIPS64_B(NEG16(10)),					/* b start */
-		MIPS64_DMFC0(15, 31, 0),				/* move COP0 DeSave to $15 */
+		/* b start */
+		MIPS64_B(NEG16(10)),
+		/* move COP0 DeSave to $15 */
+		MIPS64_DMFC0(15, 31, 0),
 		MIPS64_NOP,
 		MIPS64_NOP,
 		MIPS64_NOP,
@@ -551,14 +562,14 @@ int mips64_pracc_read_mem(struct mips_ejtag *ejtag_info, uint64_t addr,
 			  unsigned size, unsigned count, void *buf)
 {
 	switch (size) {
-		case 1:
-			return mips64_pracc_read_mem8(ejtag_info, addr, count, buf);
-		case 2:
-			return mips64_pracc_read_mem16(ejtag_info, addr, count, buf);
-		case 4:
-			return mips64_pracc_read_mem32(ejtag_info, addr, count, buf);
-		case 8:
-			return mips64_pracc_read_mem64(ejtag_info, addr, count, buf);
+	case 1:
+		return mips64_pracc_read_mem8(ejtag_info, addr, count, buf);
+	case 2:
+		return mips64_pracc_read_mem16(ejtag_info, addr, count, buf);
+	case 4:
+		return mips64_pracc_read_mem32(ejtag_info, addr, count, buf);
+	case 8:
+		return mips64_pracc_read_mem64(ejtag_info, addr, count, buf);
 	}
 	return ERROR_FAIL;
 }
