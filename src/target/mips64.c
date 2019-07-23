@@ -346,7 +346,6 @@ int mips64_build_reg_cache(struct target *target)
 	struct mips64_common *mips64 = target->arch_info;
 	struct reg_cache **cache_p, *cache;
 	struct mips64_core_reg *arch_info = NULL;
-	struct reg_feature *feature = NULL;
 	struct reg *reg_list = NULL;
 	unsigned i;
 
@@ -372,9 +371,9 @@ int mips64_build_reg_cache(struct target *target)
 		struct mips64_core_reg *a = &arch_info[i];
 		struct reg *r = &reg_list[i];
 
-		r->value = calloc(1, 4);
-		if (!r->value) {
-			LOG_ERROR("unable to allocate value");
+		r->feature = calloc(1, sizeof(*r->feature));
+		if (!r->feature) {
+			LOG_ERROR("unable to allocate feature list");
 			goto alloc_fail;
 		}
 
@@ -384,30 +383,26 @@ int mips64_build_reg_cache(struct target *target)
 			goto alloc_fail;
 		}
 
-		feature = calloc(1, sizeof(*feature));
-		if (!feature) {
-			LOG_ERROR("unable to allocate feature list");
+		r->value = calloc(1, 4);
+		if (!r->value) {
+			LOG_ERROR("unable to allocate value");
 			goto alloc_fail;
 		}
 
-		feature->name = mips64_regs[i].feature;
-		r->feature = feature;
-
 		r->arch_info = &arch_info[i];
+		r->caller_save = true;	/* gdb defaults to true */
+		r->exist = true;
+		r->feature->name = mips64_regs[i].feature;
+		r->group = mips64_regs[i].group;
 		r->name = mips64_regs[i].name;
+		r->number = i;
+		r->reg_data_type->type = mips64_regs[i].type;
 		r->size = reg_type2size(mips64_regs[i].type);
 		r->type = &mips64_reg_type;
 
-		r->reg_data_type->type = mips64_regs[i].type;
-
-		r->group = mips64_regs[i].group;
-		r->number = i;
-		r->exist = true;
-		r->caller_save = true;	/* gdb defaults to true */
-
+		a->mips64_common = mips64;
 		a->num = mips64_regs[i].id;
 		a->target = target;
-		a->mips64_common = mips64;
 	}
 
 	cache->name = "mips64 registers";
@@ -424,7 +419,6 @@ int mips64_build_reg_cache(struct target *target)
 alloc_fail:
 	free(cache);
 	free(arch_info);
-	free(feature);
 	for (i = 0; i < MIPS64_NUM_REGS; i++) {
 		free(reg_list[i].value);
 		free(reg_list[i].reg_data_type);
