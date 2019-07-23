@@ -344,7 +344,6 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
-
 	struct reg_cache **cache_p, *cache;
 	struct mips64_core_reg *arch_info = NULL;
 	struct reg_feature *feature = NULL;
@@ -368,16 +367,6 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 		LOG_ERROR("unable to allocate arch_info");
 		goto alloc_fail;
 	}
-
-	/* Build the process context cache */
-	cache->name = "mips64 registers";
-	cache->reg_list = reg_list;
-	cache->num_regs = MIPS64_NUM_REGS;
-
-	cache_p = register_get_last_cache_p(&target->reg_cache);
-	(*cache_p) = cache;
-
-	mips64->core_cache = cache;
 
 	for (i = 0; i < MIPS64_NUM_REGS; i++) {
 		struct mips64_core_reg *a = &arch_info[i];
@@ -420,6 +409,15 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 		a->target = target;
 		a->mips64_common = mips64;
 	}
+
+	cache->name = "mips64 registers";
+	cache->reg_list = reg_list;
+	cache->num_regs = MIPS64_NUM_REGS;
+
+	cache_p = register_get_last_cache_p(&target->reg_cache);
+	(*cache_p) = cache;
+
+	mips64->core_cache = cache;
 
 	return cache;
 
