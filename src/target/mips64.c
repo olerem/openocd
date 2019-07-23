@@ -391,7 +391,6 @@ struct reg_cache *mips64_build_reg_cache(struct target *target)
 		arch_info[i].mips64_common = mips64;
 		reg_list[i].name = mips64_regs[i].name;
 		reg_list[i].size = reg_type2size(mips64_regs[i].type);
-		reg_list[i].value = calloc(1, 8);
 
 		if (mips64_regs[i].flag == MIPS32_GDB_DUMMY_FP_REG) {
 			reg_list[i].value = mips32_gdb_dummy_fp_value;
