@@ -167,7 +167,8 @@ static int mips_mips64_assert_reset(struct target *target)
 	}
 
 	if (target->reset_halt)
-		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_EJTAGBOOT); /* use hardware to catch reset */
+		/* use hardware to catch reset */
+		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_EJTAGBOOT);
 	else
 		mips_ejtag_set_instr(ejtag_info, EJTAG_INST_NORMALBOOT);
 
@@ -227,7 +228,8 @@ static int mips_mips64_single_step_core(struct target *target)
 	return ERROR_OK;
 }
 
-static int mips_mips64_set_breakpoint(struct target *target, struct breakpoint *breakpoint)
+static int mips_mips64_set_breakpoint(struct target *target,
+				      struct breakpoint *breakpoint)
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips64_comparator *comparator_list = mips64->inst_break_list;
@@ -268,13 +270,17 @@ static int mips_mips64_set_breakpoint(struct target *target, struct breakpoint *
 		LOG_DEBUG("bpid: %d", breakpoint->unique_id);
 		if (breakpoint->length == 4) {
 			uint32_t verify = 0xffffffff;
-			retval = target_read_memory(target, breakpoint->address, breakpoint->length, 1, breakpoint->orig_instr);
+			retval = target_read_memory(target, breakpoint->address,
+						    breakpoint->length, 1,
+						    breakpoint->orig_instr);
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_write_u32(target, breakpoint->address, MIPS64_SDBBP);
+			retval = target_write_u32(target, breakpoint->address,
+						  MIPS64_SDBBP);
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_read_u32(target, breakpoint->address, &verify);
+			retval = target_read_u32(target, breakpoint->address,
+						 &verify);
 			if (retval != ERROR_OK)
 				return retval;
 			if (verify != MIPS64_SDBBP) {
@@ -283,15 +289,20 @@ static int mips_mips64_set_breakpoint(struct target *target, struct breakpoint *
 			}
 		} else {
 			uint16_t verify = 0xffff;
-			uint32_t isa_req = breakpoint->length & 1;	/* micro mips request bit */
+			/* micro mips request bit */
+			uint32_t isa_req = breakpoint->length & 1;
 
-			retval = target_read_memory(target, breakpoint->address, breakpoint->length, 1, breakpoint->orig_instr);
+			retval = target_read_memory(target, breakpoint->address,
+						    breakpoint->length, 1,
+						    breakpoint->orig_instr);
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_write_u16(target, breakpoint->address, MIPS16_SDBBP(isa_req));
+			retval = target_write_u16(target, breakpoint->address,
+						  MIPS16_SDBBP(isa_req));
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_read_u16(target, breakpoint->address, &verify);
+			retval = target_read_u16(target, breakpoint->address,
+						 &verify);
 			if (retval != ERROR_OK)
 				return retval;
 			if (verify != MIPS16_SDBBP(isa_req)) {
@@ -318,7 +329,8 @@ static void mips_mips64_enable_breakpoints(struct target *target)
 	}
 }
 
-static int mips_mips64_set_watchpoint(struct target *target, struct watchpoint *watchpoint)
+static int mips_mips64_set_watchpoint(struct target *target,
+				      struct watchpoint *watchpoint)
 {
 	uint64_t wp_value;
 	struct mips64_common *mips64 = target->arch_info;
@@ -329,7 +341,8 @@ static int mips_mips64_set_watchpoint(struct target *target, struct watchpoint *
 	 * and exclude both load and store accesses from  watchpoint
 	 * condition evaluation
 	*/
-	int enable = EJTAG_DBCn_NOSB | EJTAG_DBCn_NOLB | EJTAG_DBCn_BE | (0xff << EJTAG_DBCn_BLM_SHIFT);
+	int enable = EJTAG_DBCn_NOSB | EJTAG_DBCn_NOLB | EJTAG_DBCn_BE
+		| (0xff << EJTAG_DBCn_BLM_SHIFT);
 
 	if (watchpoint->set) {
 		LOG_WARNING("watchpoint already set");
@@ -376,11 +389,15 @@ static int mips_mips64_set_watchpoint(struct target *target, struct watchpoint *
 		wp_value |= ULLONG_MAX << 32;
 
 	target_write_u64(target, comparator_list[wp_num].reg_address, wp_value);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x08, 0x00000000);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x10, 0x00000000);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x18, enable);
+	target_write_u64(target, comparator_list[wp_num].reg_address + 0x08,
+			 0x00000000);
+	target_write_u64(target, comparator_list[wp_num].reg_address + 0x10,
+			 0x00000000);
+	target_write_u64(target, comparator_list[wp_num].reg_address + 0x18,
+			 enable);
 	target_write_u64(target, comparator_list[wp_num].reg_address + 0x20, 0);
-	LOG_DEBUG("wp_num %i bp_value 0x%" PRIx64 "", wp_num, comparator_list[wp_num].bp_value);
+	LOG_DEBUG("wp_num %i bp_value 0x%" PRIx64 "", wp_num,
+		  comparator_list[wp_num].bp_value);
 
 	return ERROR_OK;
 }
@@ -397,7 +414,8 @@ static void mips_mips64_enable_watchpoints(struct target *target)
 	}
 }
 
-static int mips_mips64_unset_breakpoint(struct target *target, struct breakpoint *breakpoint)
+static int mips_mips64_unset_breakpoint(struct target *target,
+					struct breakpoint *breakpoint)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
@@ -428,8 +446,10 @@ static int mips_mips64_unset_breakpoint(struct target *target, struct breakpoint
 		if (breakpoint->length == 4) {
 			uint32_t current_instr;
 
-			/* check that user program has not modified breakpoint instruction */
-			retval = target_read_memory(target, breakpoint->address, 4, 1, (uint8_t *)&current_instr);
+			/* check that user program has not modified breakpoint
+			 * instruction */
+			retval = target_read_memory(target, breakpoint->address,
+						    4, 1, (uint8_t *)&current_instr);
 			if (retval != ERROR_OK)
 				return retval;
 			if (target_buffer_get_u32(target, (uint8_t *)&current_instr) == MIPS64_SDBBP) {
@@ -526,7 +546,8 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 	return ERROR_OK;
 }
 
-static int mips_mips64_step(struct target *target, int current, uint64_t address, int handle_breakpoints)
+static int mips_mips64_step(struct target *target, int current,
+			    uint64_t address, int handle_breakpoints)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
@@ -586,7 +607,8 @@ static int mips_mips64_step(struct target *target, int current, uint64_t address
 	return ERROR_OK;
 }
 
-static int mips_mips64_add_breakpoint(struct target *target, struct breakpoint *breakpoint)
+static int mips_mips64_add_breakpoint(struct target *target,
+				      struct breakpoint *breakpoint)
 {
 	struct mips64_common *mips64 = target->arch_info;
 
@@ -607,7 +629,8 @@ static int mips_mips64_add_breakpoint(struct target *target, struct breakpoint *
 	return ERROR_OK;
 }
 
-static int mips_mips64_remove_breakpoint(struct target *target, struct breakpoint *breakpoint)
+static int mips_mips64_remove_breakpoint(struct target *target,
+					 struct breakpoint *breakpoint)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
@@ -626,7 +649,8 @@ static int mips_mips64_remove_breakpoint(struct target *target, struct breakpoin
 	return ERROR_OK;
 }
 
-static int mips_mips64_unset_watchpoint(struct target *target, struct watchpoint *watchpoint)
+static int mips_mips64_unset_watchpoint(struct target *target,
+					struct watchpoint *watchpoint)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
@@ -650,7 +674,8 @@ static int mips_mips64_unset_watchpoint(struct target *target, struct watchpoint
 	return ERROR_OK;
 }
 
-static int mips_mips64_add_watchpoint(struct target *target, struct watchpoint *watchpoint)
+static int mips_mips64_add_watchpoint(struct target *target,
+				      struct watchpoint *watchpoint)
 {
 	struct mips64_common *mips64 = target->arch_info;
 
@@ -665,7 +690,8 @@ static int mips_mips64_add_watchpoint(struct target *target, struct watchpoint *
 	return ERROR_OK;
 }
 
-static int mips_mips64_remove_watchpoint(struct target *target, struct watchpoint *watchpoint)
+static int mips_mips64_remove_watchpoint(struct target *target,
+					 struct watchpoint *watchpoint)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
@@ -749,8 +775,9 @@ static int mips_mips64_read_memory(struct target *target, uint64_t address,
 	return retval;
 }
 
-static int mips_mips64_bulk_write_memory(struct target *target, target_addr_t address,
-		uint32_t count, const uint8_t *buffer)
+static int mips_mips64_bulk_write_memory(struct target *target,
+					 target_addr_t address, uint32_t count,
+					 const uint8_t *buffer)
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
@@ -929,7 +956,8 @@ static int mips_mips64_examine(struct target *target)
 	return mips64_examine(target);
 }
 
-static int mips_mips64_checksum_memory(struct target *target, uint64_t address, uint32_t size, uint32_t *checksum)
+static int mips_mips64_checksum_memory(struct target *target, uint64_t address,
+				       uint32_t size, uint32_t *checksum)
 {
 	return ERROR_FAIL; /* use bulk read method */
 }
