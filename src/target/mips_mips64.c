@@ -849,32 +849,31 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
 	int retval;
 
-	if (mips64->mips64mode32)
-		address = mips64_extend_sign(address);
-
-	LOG_DEBUG("address: 0x%16.16" PRIx64 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
-
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
 
 	/* sanitize arguments */
-	if (((size != 8) && (size != 4) && (size != 2) && (size != 1)) || (count == 0) || !(buffer))
+	if (((size != 8) && (size != 4) && (size != 2) && (size != 1))
+	    || !count || !buffer)
 		return ERROR_COMMAND_ARGUMENT_INVALID;
 
-	if (((size == 8) && (address & 0x7u)) || ((size == 4) && (address & 0x3u)) ||
-	    ((size == 2) && (address & 0x1u)))
+	if (((size == 8) && (address & 0x7)) || ((size == 4) && (address & 0x3))
+	    || ((size == 2) && (address & 0x1)))
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 
+
+
 	if (size == 8 && count > 8) {
-		retval = mips_mips64_bulk_write_memory(target,
-			address,
-			count,
-			buffer);
+		retval = mips_mips64_bulk_write_memory(target, address, count,
+						       buffer);
 		if (retval == ERROR_OK)
 			return ERROR_OK;
+
 		LOG_WARNING("Falling back to non-bulk write");
 	}
 
@@ -882,40 +881,37 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 	if (size > 1) {
 		/* mips32_..._write_mem with size 4/2 requires uint32_t/uint16_t in host */
 		/* endianness, but byte array represents target endianness               */
-		t = malloc(count * size * sizeof(uint8_t));
-		if (t == NULL) {
-			LOG_ERROR("Out of memory");
+		t = calloc(count,size);
+		if (!t) {
+			LOG_ERROR("unable to allocate t for write buffer");
 			return ERROR_FAIL;
 		}
 
 		switch (size) {
 		case 8:
-			target_buffer_get_u64_array(target, buffer, count, (uint64_t *)t);
+			target_buffer_get_u64_array(target, buffer, count,
+						    (uint64_t *)t);
 			break;
 		case 4:
-			target_buffer_get_u32_array(target, buffer, count, (uint32_t *)t);
+			target_buffer_get_u32_array(target, buffer, count,
+						    (uint32_t *)t);
 			break;
 		case 2:
-			target_buffer_get_u16_array(target, buffer, count, (uint16_t *)t);
+			target_buffer_get_u16_array(target, buffer, count,
+						    (uint16_t *)t);
 			break;
 		}
 		buffer = t;
 	}
 
-	/* if noDMA off, use DMAACC mode for memory write */
-	if (ejtag_info->impcode & EJTAG_IMP_NODMA)
-		retval = mips64_pracc_write_mem(ejtag_info, (uint64_t) address, size, count, (void *)buffer);
-	else
-		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
-		/* return mips64_dmaacc_write_mem(ejtag_info, (uint64_t) address, size, count, (void *)buffer); */
+	LOG_DEBUG("address: 0x%16.16" PRIx64 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "",
+		  address, size, count);
 
-	if (t != NULL)
-		free(t);
+	retval = mips64_pracc_write_mem(ejtag_info, address, size, count,
+					(void *)buffer);
+	free(t);
 
-	if (ERROR_OK != retval)
-		return retval;
-
-	return ERROR_OK;
+	return retval;
 }
 
 static int mips_mips64_init_target(struct command_context *cmd_ctx,
