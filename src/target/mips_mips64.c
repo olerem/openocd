@@ -897,28 +897,25 @@ static int mips_mips64_init_target(struct command_context *cmd_ctx,
 	return mips64_build_reg_cache(target);
 }
 
-static int mips_mips64_init_arch_info(struct target *target,
-					struct mips_mips64_common *mips_mips64,
-					struct jtag_tap *tap)
+static int mips_mips64_target_create(struct target *target, Jim_Interp *interp)
 {
-	struct mips64_common *mips64 = &mips_mips64->mips64_common;
+	struct mips_mips64_common *mips_mips64;
+	struct mips64_common *mips64;
+
+
+	mips_mips64 = calloc(1, sizeof(*mips_mips64));
+	if (!mips_mips64) {
+		LOG_ERROR("unable to allocate mips_mips64");
+		return ERROR_FAIL;
+	}
+
 
 	mips_mips64->common_magic = MIPS64_COMMON_MAGIC;
 
-	/* initialize mips4k specific info */
-	mips64_init_arch_info(target, mips64, tap);
+	mips64 = &mips_mips64->mips64_common;
 	mips64->arch_info = mips_mips64;
 
-	return ERROR_OK;
-}
-
-static int mips_mips64_target_create(struct target *target, Jim_Interp *interp)
-{
-	struct mips_mips64_common *mips_mips64 = calloc(1, sizeof(struct mips_mips64_common));
-
-	mips_mips64_init_arch_info(target, mips_mips64, target->tap);
-
-	return ERROR_OK;
+	return mips64_init_arch_info(target, mips64, target->tap);
 }
 
 static int mips_mips64_examine(struct target *target)
