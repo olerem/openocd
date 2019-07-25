@@ -473,14 +473,81 @@ int mips64_examine(struct target *target)
 	return ERROR_OK;
 }
 
-int mips64_configure_break_unit(struct target *target)
+static int mips64_configure_i_break_unit(struct target *target)
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
-	int retval;
-	uint64_t dcr;
+	struct mips64_comparator *ibl;
 	uint64_t bpinfo;
+	int retval;
 	int i;
+
+	/* get number of inst breakpoints */
+	retval = target_read_u64(target, EJTAG64_V25_IBS, &bpinfo);
+	if (retval != ERROR_OK)
+		return retval;
+
+	mips64->num_inst_bpoints = (bpinfo >> 24) & 0x0F;
+	mips64->num_inst_bpoints_avail = mips64->num_inst_bpoints;
+	ibl = calloc(mips64->num_inst_bpoints, sizeof(*ibl));
+	if (!ibl) {
+		LOG_ERROR("unable to allocate inst_break_list");
+		return ERROR_FAIL;
+	}
+
+	for (i = 0; i < mips64->num_inst_bpoints; i++)
+		ibl[i].reg_address = EJTAG64_V25_IBA0 + (0x100 * i);
+
+	mips64->inst_break_list = ibl;
+	/* clear IBIS reg */
+	retval = target_write_u64(target, EJTAG64_V25_IBS, 0);
+	if (retval != ERROR_OK)
+		return retval;
+
+	return ERROR_OK;
+}
+
+static int mips64_configure_d_break_unit(struct target *target)
+{
+	struct mips64_common *mips64 = target->arch_info;
+	struct mips64_comparator *dbl;
+	uint64_t bpinfo;
+	int retval;
+	int i;
+
+	/* get number of data breakpoints */
+	retval = target_read_u64(target, EJTAG64_V25_DBS, &bpinfo);
+	if (retval != ERROR_OK)
+		return retval;
+
+	mips64->num_data_bpoints = (bpinfo >> 24) & 0x0F;
+	mips64->num_data_bpoints_avail = mips64->num_data_bpoints;
+
+	dbl = calloc(mips64->num_data_bpoints, sizeof(*dbl));
+
+	if (!dbl) {
+		LOG_ERROR("unable to allocate data_break_list");
+		return ERROR_FAIL;
+	}
+
+	for (i = 0; i < mips64->num_data_bpoints; i++)
+		dbl[i].reg_address = EJTAG64_V25_DBA0 + (0x100 * i);
+
+	mips64->data_break_list = dbl;
+
+	/* clear DBIS reg */
+	retval = target_write_u64(target, EJTAG64_V25_DBS, 0);
+	if (retval != ERROR_OK)
+		return retval;
+
+	return ERROR_OK;
+}
+
+int mips64_configure_break_unit(struct target *target)
+{
+	struct mips64_common *mips64 = target->arch_info;
+	uint64_t dcr;
+	int retval;
 
 	if (mips64->bp_scanned)
 		return ERROR_OK;
@@ -491,42 +558,19 @@ int mips64_configure_break_unit(struct target *target)
 		return retval;
 
 	if (dcr & EJTAG64_DCR_IB) {
-		/* get number of inst breakpoints */
-		retval = target_read_u64(target, EJTAG64_V25_IBS, &bpinfo);
-		if (retval != ERROR_OK)
-			return retval;
-
-		mips64->num_inst_bpoints = (bpinfo >> 24) & 0x0F;
-		mips64->num_inst_bpoints_avail = mips64->num_inst_bpoints;
-		mips64->inst_break_list = calloc(mips64->num_inst_bpoints, sizeof(struct mips64_comparator));
-		for (i = 0; i < mips64->num_inst_bpoints; i++)
-			mips64->inst_break_list[i].reg_address = EJTAG64_V25_IBA0 + (0x100 * i);
-
-		/* clear IBIS reg */
-		retval = target_write_u64(target, EJTAG64_V25_IBS, 0);
+		retval = mips64_configure_i_break_unit(target);
 		if (retval != ERROR_OK)
 			return retval;
 	}
 
 	if (dcr & EJTAG64_DCR_DB) {
-		/* get number of data breakpoints */
-		retval = target_read_u64(target, EJTAG64_V25_DBS, &bpinfo);
-		if (retval != ERROR_OK)
-			return retval;
-
-		mips64->num_data_bpoints = (bpinfo >> 24) & 0x0F;
-		mips64->num_data_bpoints_avail = mips64->num_data_bpoints;
-		mips64->data_break_list = calloc(mips64->num_data_bpoints, sizeof(struct mips64_comparator));
-		for (i = 0; i < mips64->num_data_bpoints; i++)
-			mips64->data_break_list[i].reg_address = EJTAG64_V25_DBA0 + (0x100 * i);
-
-		/* clear DBIS reg */
-		retval = target_write_u64(target, EJTAG64_V25_DBS, 0);
+		retval = mips64_configure_d_break_unit(target);
 		if (retval != ERROR_OK)
 			return retval;
 	}
 
-	LOG_DEBUG("DCR 0x%" PRIx64 " numinst %i numdata %i", dcr, mips64->num_inst_bpoints, mips64->num_data_bpoints);
+	LOG_DEBUG("DCR 0x%" PRIx64 " numinst %i numdata %i", dcr,
+		  mips64->num_inst_bpoints, mips64->num_data_bpoints);
 
 	mips64->bp_scanned = true;
 
