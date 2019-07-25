@@ -714,62 +714,61 @@ static int mips_mips64_read_memory(struct target *target, uint64_t address,
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
-
-	if (mips64->mips64mode32)
-		address = mips64_extend_sign(address);
-
-	LOG_DEBUG("address: 0x%16.16" PRIx64 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
+	int retval;
+	void *t;
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted %d", target->state);
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
+
 	/* sanitize arguments */
-	if (((size != 8) && (size != 4) && (size != 2) && (size != 1)) || (count == 0) || !(buffer))
+	if (((size != 8) && (size != 4) && (size != 2) && (size != 1))
+	    || !count || !buffer)
 		return ERROR_COMMAND_ARGUMENT_INVALID;
 
-	if (((size == 8) && (address & 0x7u)) || ((size == 4) && (address & 0x3u)) ||
-	    ((size == 2) && (address & 0x1u)))
+	if (((size == 8) && (address & 0x7)) || ((size == 4) && (address & 0x3))
+	    || ((size == 2) && (address & 0x1)))
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 
-	/* since we don't know if buffer is aligned, we allocate new mem that is always aligned */
-	void *t = NULL;
-
 	if (size > 1) {
-		t = malloc(count * size * sizeof(uint8_t));
-		if (t == NULL) {
+		t = calloc(count, size);
+		if (!t) {
 			LOG_ERROR("Out of memory");
 			return ERROR_FAIL;
 		}
 	} else
 		t = buffer;
 
-	/* if noDMA off, use DMAACC mode for memory read */
-	int retval;
-	if (ejtag_info->impcode & EJTAG_IMP_NODMA)
-		retval = mips64_pracc_read_mem(ejtag_info, (uint64_t) address, size, count, (void *)t);
-	else
-		retval = ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
-		/* retval = mips64_dmaacc_read_mem(ejtag_info, (uint64_t) address, size, count, (void *)buffer); */
+	LOG_DEBUG("address: 0x%16.16" PRIx64 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "",
+		  address, size, count);
+	retval = mips64_pracc_read_mem(ejtag_info, address, size, count,
+				       (void *)t);
 
 	/* mips32_..._read_mem with size 4/2 returns uint32_t/uint16_t in host */
 	/* endianness, but byte array should represent target endianness       */
-	if (ERROR_OK == retval) {
-		switch (size) {
-		case 8:
-			target_buffer_set_u64_array(target, buffer, count, t);
-			break;
-		case 4:
-			target_buffer_set_u32_array(target, buffer, count, t);
-			break;
-		case 2:
-			target_buffer_set_u16_array(target, buffer, count, t);
-			break;
-		}
+	if (ERROR_OK != retval) {
+		LOG_ERROR("mips64_pracc_read_mem filed");
+		goto read_done;
 	}
 
-	if ((size > 1) && (t != NULL))
+	switch (size) {
+	case 8:
+		target_buffer_set_u64_array(target, buffer, count, t);
+		break;
+	case 4:
+		target_buffer_set_u32_array(target, buffer, count, t);
+		break;
+	case 2:
+		target_buffer_set_u16_array(target, buffer, count, t);
+		break;
+	}
+
+read_done:
+	if (size > 1)
 		free(t);
 
 	return retval;
@@ -784,20 +783,20 @@ static int mips_mips64_bulk_write_memory(struct target *target,
 	struct working_area *fast_data_area;
 	int retval;
 
-	LOG_DEBUG("address: " TARGET_ADDR_FMT ", count: 0x%8.8" PRIx32 "", address, count);
+	LOG_DEBUG("address: " TARGET_ADDR_FMT ", count: 0x%8.8" PRIx32 "",
+		  address, count);
 
-	/* check alignment */
-	if (address & 0x7u)
+	if (address & 0x7)
 		return ERROR_TARGET_UNALIGNED_ACCESS;
 
-	if (mips64->fast_data_area == NULL) {
+	if (!mips64->fast_data_area) {
 		/* Get memory for block write handler
 		 * we preserve this area between calls and gain a speed increase
 		 * of about 3kb/sec when writing flash
 		 * this will be released/nulled by the system when the target is resumed or reset */
 		retval = target_alloc_working_area(target,
-				MIPS64_FASTDATA_HANDLER_SIZE,
-				&mips64->fast_data_area);
+						   MIPS64_FASTDATA_HANDLER_SIZE,
+						   &mips64->fast_data_area);
 		if (retval != ERROR_OK) {
 			LOG_ERROR("No working area available");
 			return retval;
@@ -810,7 +809,7 @@ static int mips_mips64_bulk_write_memory(struct target *target,
 	fast_data_area = mips64->fast_data_area;
 
 	if (address <= fast_data_area->address + fast_data_area->size &&
-			fast_data_area->address <= address + count) {
+	    fast_data_area->address <= address + count) {
 		LOG_ERROR("fast_data (" TARGET_ADDR_FMT ") is within write area "
 			  "(" TARGET_ADDR_FMT "-" TARGET_ADDR_FMT ").",
 			  fast_data_area->address, address, address + count);
@@ -820,9 +819,10 @@ static int mips_mips64_bulk_write_memory(struct target *target,
 
 	/* mips32_pracc_fastdata_xfer requires uint32_t in host endianness, */
 	/* but byte array represents target endianness                      */
-	uint64_t *t = NULL;
-	t = malloc(count * sizeof(uint64_t));
-	if (t == NULL) {
+	uint64_t *t;
+
+	t = calloc(count, sizeof(uint64_t));
+	if (!t) {
 		LOG_ERROR("Out of memory");
 		return ERROR_FAIL;
 	}
@@ -830,14 +830,12 @@ static int mips_mips64_bulk_write_memory(struct target *target,
 	target_buffer_get_u64_array(target, buffer, count, t);
 
 	retval = mips64_pracc_fastdata_xfer(ejtag_info, mips64->fast_data_area,
-			true, address,
-			count, t);
-
-	if (t != NULL)
-		free(t);
+					    true, address, count, t);
 
 	if (retval != ERROR_OK)
 		LOG_ERROR("Fastdata access Failed");
+
+	free(t);
 
 	return retval;
 }
