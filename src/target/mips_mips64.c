@@ -939,6 +939,7 @@ static int mips_mips64_target_create(struct target *target, Jim_Interp *interp)
 
 	mips64 = &mips_mips64->mips64_common;
 	mips64->arch_info = mips_mips64;
+	target->arch_info = mips64;
 
 	return mips64_init_arch_info(target, mips64, target->tap);
 }
