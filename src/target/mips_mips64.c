@@ -923,17 +923,6 @@ static int mips_mips64_examine(struct target *target)
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
 	uint32_t idcode = 0;
 
-	if (!target_was_examined(target)) {
-		mips_ejtag_get_idcode(ejtag_info);
-
-		if (((idcode >> 1) & 0x7FF) == 0x29) {
-			/* we are using a pic32mx so select ejtag port
-			 * as it is not selected by default */
-			mips_ejtag_set_instr(ejtag_info, 0x05);
-			LOG_DEBUG("PIC32MX Detected - using EJTAG Interface");
-		}
-	}
-
 	/* init rest of ejtag interface */
 	retval = mips_ejtag_init(ejtag_info);
 	if (retval != ERROR_OK)
