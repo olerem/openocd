@@ -405,25 +405,15 @@ int mips64_build_reg_cache(struct target *target)
 		struct mips64_core_reg *a = &arch_info[i];
 		struct reg *r = &reg_list[i];
 
-		r->feature = calloc(1, sizeof(*r->feature));
-		if (!r->feature) {
-			LOG_ERROR("unable to allocate feature list");
-			goto alloc_fail;
-		}
-
-		r->reg_data_type = calloc(1, sizeof(*r->reg_data_type));
-		if (!r->reg_data_type) {
-			LOG_ERROR("unable to allocate reg type list");
-			goto alloc_fail;
-		}
-
 		r->arch_info = &arch_info[i];
 		r->caller_save = true;	/* gdb defaults to true */
 		r->exist = true;
+		r->feature = &a->feature;
 		r->feature->name = mips64_regs[i].feature;
 		r->group = mips64_regs[i].group;
 		r->name = mips64_regs[i].name;
 		r->number = i;
+		r->reg_data_type = &a->reg_data_type;
 		r->reg_data_type->type = mips64_regs[i].type;
 		r->size = reg_type2size(mips64_regs[i].type);
 		r->type = &mips64_reg_type;
@@ -447,10 +437,6 @@ int mips64_build_reg_cache(struct target *target)
 
 alloc_fail:
 	free(cache);
-	for (i = 0; i < MIPS64_NUM_REGS; i++) {
-		free(reg_list[i].reg_data_type);
-		free(reg_list[i].feature);
-	}
 	free(reg_list);
 	free(arch_info);
 
