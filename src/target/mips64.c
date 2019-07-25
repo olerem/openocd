@@ -63,40 +63,74 @@ static const struct {
 	{ 31, "r31", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cpu", 0 },
 	{ 32, "lo", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cpu", 0 },
 	{ 33, "hi", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cpu", 0 },
-	{ MIPS64_NUM_CORE_REGS + 0, "pc", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cpu", 0 },
-	{ MIPS64_NUM_CORE_REGS + 1, "Random", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 2, "Entrylo_0", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 3, "Entrylo_1", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 4, "Context", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 5, "Pagemask", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 6, "Wired", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 7, "badvaddr", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 8, "Count", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 9, "EntryHi", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 10, "Compare", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 11, "status", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 12, "cause", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 13, "EPC", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 14, "PrID", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 15, "Config", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 16, "LLA", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 17, "WatchLo0", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 18, "WatchLo1", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 19, "WatchHi0", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 20, "WatchHi1", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 21, "Xcontext", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 22, "ChipMemCtrl", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 23, "Debug", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 24, "Perfcount, sel=0", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 25, "Perfcount, sel=1", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 26, "Perfcount, sel=2", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 27, "Perfcount, sel=3", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 28, "ECC", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 29, "CacheErr", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 30, "TagLo", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 31, "TagHi", REG_TYPE_UINT32, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 32, "DataHi", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
-	{ MIPS64_NUM_CORE_REGS + 33, "EEPC", REG_TYPE_UINT64, NULL, "org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 0, "pc", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cpu", 0 },
+	{ MIPS64_NUM_CORE_REGS + 1, "Random", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 2, "Entrylo_0", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 3, "Entrylo_1", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 4, "Context", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 5, "Pagemask", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 6, "Wired", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 7, "badvaddr", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 8, "Count", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 9, "EntryHi", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 10, "Compare", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 11, "status", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 12, "cause", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 13, "EPC", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 14, "PrID", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 15, "Config", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 16, "LLA", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 17, "WatchLo0", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 18, "WatchLo1", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 19, "WatchHi0", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 20, "WatchHi1", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 21, "Xcontext", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 22, "ChipMemCtrl", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 23, "Debug", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 24, "Perfcount, sel=0", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 25, "Perfcount, sel=1", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 26, "Perfcount, sel=2", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 27, "Perfcount, sel=3", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 28, "ECC", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 29, "CacheErr", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 30, "TagLo", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 31, "TagHi", REG_TYPE_UINT32, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 32, "DataHi", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
+	{ MIPS64_NUM_CORE_REGS + 33, "EEPC", REG_TYPE_UINT64, NULL,
+		"org.gnu.gdb.mips.cp0", 0 },
 	{ MIPS64_NUM_CORE_C0_REGS + 0,  "f0", REG_TYPE_IEEE_DOUBLE, NULL,
 		 "org.gnu.gdb.mips.fpu", 0 },
 	{ MIPS64_NUM_CORE_C0_REGS + 1,  "f1", REG_TYPE_IEEE_DOUBLE, NULL,
@@ -383,12 +417,6 @@ int mips64_build_reg_cache(struct target *target)
 			goto alloc_fail;
 		}
 
-		r->value = calloc(1, 4);
-		if (!r->value) {
-			LOG_ERROR("unable to allocate value");
-			goto alloc_fail;
-		}
-
 		r->arch_info = &arch_info[i];
 		r->caller_save = true;	/* gdb defaults to true */
 		r->exist = true;
@@ -399,6 +427,7 @@ int mips64_build_reg_cache(struct target *target)
 		r->reg_data_type->type = mips64_regs[i].type;
 		r->size = reg_type2size(mips64_regs[i].type);
 		r->type = &mips64_reg_type;
+		r->value = &a->value[0];
 
 		a->mips64_common = mips64;
 		a->num = mips64_regs[i].id;
@@ -418,13 +447,12 @@ int mips64_build_reg_cache(struct target *target)
 
 alloc_fail:
 	free(cache);
-	free(arch_info);
 	for (i = 0; i < MIPS64_NUM_REGS; i++) {
-		free(reg_list[i].value);
 		free(reg_list[i].reg_data_type);
 		free(reg_list[i].feature);
 	}
 	free(reg_list);
+	free(arch_info);
 
 	return ERROR_FAIL;
 }
@@ -451,7 +479,7 @@ int mips64_run_algorithm(struct target *target, int num_mem_params,
 			 struct reg_param *reg_params, target_addr_t entry_point,
 			 target_addr_t exit_point, int timeout_ms, void *arch_info)
 {
-	/*FIXME*/
+	/* TODO */
 	return ERROR_OK;
 }
 
@@ -462,6 +490,7 @@ int mips64_examine(struct target *target)
 	if (target_was_examined(target))
 		return ERROR_OK;
 
+	/* TODO: why we do not do mips64_configure_break_unit() here? */
 	mips64->bp_scanned = false;
 	mips64->num_data_bpoints = 0;
 	mips64->num_data_bpoints_avail = 0;
