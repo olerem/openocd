@@ -902,13 +902,11 @@ static int mips_mips64_target_create(struct target *target, Jim_Interp *interp)
 	struct mips_mips64_common *mips_mips64;
 	struct mips64_common *mips64;
 
-
 	mips_mips64 = calloc(1, sizeof(*mips_mips64));
 	if (!mips_mips64) {
 		LOG_ERROR("unable to allocate mips_mips64");
 		return ERROR_FAIL;
 	}
-
 
 	mips_mips64->common_magic = MIPS64_COMMON_MAGIC;
 
