@@ -459,16 +459,16 @@ int mips64_examine(struct target *target)
 {
 	struct mips64_common *mips64 = target->arch_info;
 
-	if (!target_was_examined(target)) {
-		target_set_examined(target);
+	if (target_was_examined(target))
+		return ERROR_OK;
 
-		/* we will configure later */
-		mips64->bp_scanned = false;
-		mips64->num_data_bpoints = 0;
-		mips64->num_data_bpoints_avail = 0;
-		mips64->num_inst_bpoints = 0;
-		mips64->num_inst_bpoints_avail = 0;
-	}
+	mips64->bp_scanned = false;
+	mips64->num_data_bpoints = 0;
+	mips64->num_data_bpoints_avail = 0;
+	mips64->num_inst_bpoints = 0;
+	mips64->num_inst_bpoints_avail = 0;
+
+	target_set_examined(target);
 
 	return ERROR_OK;
 }
