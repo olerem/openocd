@@ -108,6 +108,7 @@ struct mips64_core_reg {
 	uint32_t num;
 	struct target *target;
 	struct mips64_common *mips64_common;
+	uint8_t value[8];
 };
 
 #define MIPS64_OP_SRL	0x02
