@@ -938,6 +938,7 @@ static int mips_mips64_target_create(struct target *target, Jim_Interp *interp)
 	mips_mips64->common_magic = MIPS64_COMMON_MAGIC;
 
 	mips64 = &mips_mips64->mips64_common;
+	/* TODO: looks like arch_info is misused name */
 	mips64->arch_info = mips_mips64;
 	target->arch_info = mips64;
 
