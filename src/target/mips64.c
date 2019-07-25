@@ -429,28 +429,27 @@ alloc_fail:
 	return ERROR_FAIL;
 }
 
-int mips64_init_arch_info(struct target *target, struct mips64_common *mips64, struct jtag_tap *tap)
+int mips64_init_arch_info(struct target *target, struct mips64_common *mips64,
+			  struct jtag_tap *tap)
 {
 	target->arch_info = mips64;
-	mips64->common_magic = MIPS64_COMMON_MAGIC;
 
 	mips64->bp_scanned = false;
+	mips64->common_magic = MIPS64_COMMON_MAGIC;
 	mips64->data_break_list = NULL;
-
 	mips64->ejtag_info.tap = tap;
+	mips64->fast_data_area = NULL;
+	mips64->mips64mode32 = false;
 	mips64->read_core_reg = mips64_read_core_reg;
 	mips64->write_core_reg = mips64_write_core_reg;
-
-	mips64->fast_data_area = NULL;
-
-	mips64->mips64mode32 = false;
 
 	return ERROR_OK;
 }
 
 int mips64_run_algorithm(struct target *target, int num_mem_params,
-	struct mem_param *mem_params, int num_reg_params, struct reg_param *reg_params,
-	target_addr_t entry_point, target_addr_t exit_point, int timeout_ms, void *arch_info)
+			 struct mem_param *mem_params, int num_reg_params,
+			 struct reg_param *reg_params, target_addr_t entry_point,
+			 target_addr_t exit_point, int timeout_ms, void *arch_info)
 {
 	/*FIXME*/
 	return ERROR_OK;
@@ -465,10 +464,10 @@ int mips64_examine(struct target *target)
 
 		/* we will configure later */
 		mips64->bp_scanned = false;
-		mips64->num_inst_bpoints = 0;
 		mips64->num_data_bpoints = 0;
-		mips64->num_inst_bpoints_avail = 0;
 		mips64->num_data_bpoints_avail = 0;
+		mips64->num_inst_bpoints = 0;
+		mips64->num_inst_bpoints_avail = 0;
 	}
 
 	return ERROR_OK;
