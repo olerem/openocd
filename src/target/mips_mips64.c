@@ -920,11 +920,9 @@ static int mips_mips64_examine(struct target *target)
 {
 	int retval;
 	struct mips64_common *mips64 = target->arch_info;
-	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
-	uint32_t idcode = 0;
 
 	/* init rest of ejtag interface */
-	retval = mips_ejtag_init(ejtag_info);
+	retval = mips_ejtag_init(&mips64->ejtag_info);
 	if (retval != ERROR_OK)
 		return retval;
 
