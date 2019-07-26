@@ -317,16 +317,22 @@ static int mips_mips64_set_breakpoint(struct target *target,
 	return ERROR_OK;
 }
 
-static void mips_mips64_enable_breakpoints(struct target *target)
+static int mips_mips64_enable_breakpoints(struct target *target)
 {
 	struct breakpoint *breakpoint = target->breakpoints;
+	int retval = ERROR_OK;
 
 	/* set any pending breakpoints */
 	while (breakpoint) {
-		if (breakpoint->set == 0)
-			mips_mips64_set_breakpoint(target, breakpoint);
+		if (breakpoint->set == 0) {
+			retval = mips_mips64_set_breakpoint(target, breakpoint);
+			if (retval != ERROR_OK)
+				return retval;
+		}
 		breakpoint = breakpoint->next;
 	}
+
+	return ERROR_OK;
 }
 
 static int mips_mips64_set_watchpoint(struct target *target,
@@ -402,16 +408,22 @@ static int mips_mips64_set_watchpoint(struct target *target,
 	return ERROR_OK;
 }
 
-static void mips_mips64_enable_watchpoints(struct target *target)
+static int mips_mips64_enable_watchpoints(struct target *target)
 {
 	struct watchpoint *watchpoint = target->watchpoints;
+	int retval;
 
 	/* set any pending watchpoints */
 	while (watchpoint) {
-		if (watchpoint->set == 0)
-			mips_mips64_set_watchpoint(target, watchpoint);
+		if (watchpoint->set == 0) {
+			retval = mips_mips64_set_watchpoint(target, watchpoint);
+			if (retval != ERROR_OK)
+				return retval;
+		}
 		watchpoint = watchpoint->next;
 	}
+
+	return ERROR_OK;
 }
 
 static int mips_mips64_unset_breakpoint(struct target *target,
@@ -486,6 +498,7 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 	struct reg *pc = &mips64->core_cache->reg_list[MIPS64_PC];
 	struct breakpoint *breakpoint = NULL;
 	uint64_t resume_pc;
+	int retval = ERROR_OK;
 
 	if (mips64->mips64mode32)
 		address = mips64_extend_sign(address);
@@ -497,8 +510,13 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 
 	if (!debug_execution) {
 		target_free_all_working_areas(target);
-		mips_mips64_enable_breakpoints(target);
-		mips_mips64_enable_watchpoints(target);
+		retval = mips_mips64_enable_breakpoints(target);
+		if (retval != ERROR_OK)
+			return retval;
+
+		retval = mips_mips64_enable_watchpoints(target);
+		if (retval != ERROR_OK)
+			return retval;
 	}
 
 	/* current = 1: continue on current pc, otherwise continue at <address> */
