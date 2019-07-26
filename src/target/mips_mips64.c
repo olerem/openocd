@@ -49,6 +49,7 @@ static int mips_mips64_debug_entry(struct target *target)
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
+	struct reg *pc = &mips64->core_cache->reg_list[MIPS64_PC];
 
 	mips64_save_context(target);
 
@@ -62,8 +63,7 @@ static int mips_mips64_debug_entry(struct target *target)
 	mips_mips64_examine_debug_reason(target);
 
 	LOG_DEBUG("entered debug state at PC 0x%" PRIx64 ", target->state: %s",
-		*(uint64_t *)(mips64->core_cache->reg_list[MIPS64_PC].value),
-		  target_state_name(target));
+		  *(uint64_t *)pc->value, target_state_name(target));
 
 	return ERROR_OK;
 }
@@ -483,6 +483,7 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
+	struct reg *pc = &mips64->core_cache->reg_list[MIPS64_PC];
 	struct breakpoint *breakpoint = NULL;
 	uint64_t resume_pc;
 
@@ -502,12 +503,12 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 
 	/* current = 1: continue on current pc, otherwise continue at <address> */
 	if (!current) {
-		buf_set_u64(mips64->core_cache->reg_list[MIPS64_PC].value, 0, 64, (uint64_t) address);
-		mips64->core_cache->reg_list[MIPS64_PC].dirty = 1;
-		mips64->core_cache->reg_list[MIPS64_PC].valid = 1;
+		buf_set_u64(pc->value, 0, 64, address);
+		pc->dirty = 1;
+		pc->valid = 1;
 	}
 
-	resume_pc = buf_get_u64(mips64->core_cache->reg_list[MIPS64_PC].value, 0, 64);
+	resume_pc = buf_get_u64(pc->value, 0, 64);
 
 	mips64_restore_context(target);
 
@@ -549,32 +550,38 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 static int mips_mips64_step(struct target *target, int current,
 			    uint64_t address, int handle_breakpoints)
 {
-	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
+	struct reg *pc = &mips64->core_cache->reg_list[MIPS64_PC];
 	struct breakpoint *breakpoint = NULL;
-
-	if (mips64->mips64mode32)
-		address = mips64_extend_sign(address);
+	int retval = ERROR_OK;
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	/* current = 1: continue on current pc, otherwise continue at <address> */
+	if (mips64->mips64mode32)
+		address = mips64_extend_sign(address);
+
+	/* current = 1: continue on current pc, otherwise continue at
+	 * <address> */
 	if (!current) {
-		buf_set_u64(mips64->core_cache->reg_list[MIPS64_PC].value, 0, 64, (uint64_t) address);
-		mips64->core_cache->reg_list[MIPS64_PC].dirty = 1;
-		mips64->core_cache->reg_list[MIPS64_PC].valid = 1;
+		buf_set_u64(pc->value, 0, 64, address);
+		pc->dirty = 1;
+		pc->valid = 1;
 	}
 
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints) {
-		breakpoint = breakpoint_find(target,
-			(uint64_t) buf_get_u64(mips64->core_cache->reg_list[MIPS64_PC].value, 0, 64));
-		if (breakpoint)
-			mips_mips64_unset_breakpoint(target, breakpoint);
+		breakpoint = breakpoint_find(target, buf_get_u64(pc->value, 0,
+								 64));
+		if (breakpoint) {
+			retval = mips_mips64_unset_breakpoint(target,
+							      breakpoint);
+			if (retval != ERROR_OK)
+				return ERROR_OK;
+		}
 	}
 
 	/* restore context */
@@ -624,9 +631,7 @@ static int mips_mips64_add_breakpoint(struct target *target,
 		mips64->num_inst_bpoints_avail--;
 	}
 
-	mips_mips64_set_breakpoint(target, breakpoint);
-
-	return ERROR_OK;
+	return mips_mips64_set_breakpoint(target, breakpoint);
 }
 
 static int mips_mips64_remove_breakpoint(struct target *target,
@@ -634,6 +639,7 @@ static int mips_mips64_remove_breakpoint(struct target *target,
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
+	int retval = ERROR_OK;
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
@@ -641,12 +647,12 @@ static int mips_mips64_remove_breakpoint(struct target *target,
 	}
 
 	if (breakpoint->set)
-		mips_mips64_unset_breakpoint(target, breakpoint);
+		retval = mips_mips64_unset_breakpoint(target, breakpoint);
 
 	if (breakpoint->type == BKPT_HARD)
 		mips64->num_inst_bpoints_avail++;
 
-	return ERROR_OK;
+	return retval;
 }
 
 static int mips_mips64_unset_watchpoint(struct target *target,
@@ -686,8 +692,7 @@ static int mips_mips64_add_watchpoint(struct target *target,
 
 	mips64->num_data_bpoints_avail--;
 
-	mips_mips64_set_watchpoint(target, watchpoint);
-	return ERROR_OK;
+	return mips_mips64_set_watchpoint(target, watchpoint);
 }
 
 static int mips_mips64_remove_watchpoint(struct target *target,
@@ -695,6 +700,7 @@ static int mips_mips64_remove_watchpoint(struct target *target,
 {
 	/* get pointers to arch-specific information */
 	struct mips64_common *mips64 = target->arch_info;
+	int retval = ERROR_OK;
 
 	if (target->state != TARGET_HALTED) {
 		LOG_WARNING("target not halted");
@@ -702,11 +708,11 @@ static int mips_mips64_remove_watchpoint(struct target *target,
 	}
 
 	if (watchpoint->set)
-		mips_mips64_unset_watchpoint(target, watchpoint);
+		retval = mips_mips64_unset_watchpoint(target, watchpoint);
 
 	mips64->num_data_bpoints_avail++;
 
-	return ERROR_OK;
+	return retval;
 }
 
 static int mips_mips64_read_memory(struct target *target, uint64_t address,
