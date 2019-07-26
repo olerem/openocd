@@ -580,38 +580,53 @@ static int mips_mips64_step(struct target *target, int current,
 			retval = mips_mips64_unset_breakpoint(target,
 							      breakpoint);
 			if (retval != ERROR_OK)
-				return ERROR_OK;
+				return retval;
 		}
 	}
 
-	/* restore context */
-	mips64_restore_context(target);
+	retval = mips64_restore_context(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* configure single step mode */
-	mips64_ejtag_config_step(ejtag_info, 1);
+	retval = mips64_ejtag_config_step(ejtag_info, 1);
+	if (retval != ERROR_OK)
+		return retval;
 
 	target->debug_reason = DBG_REASON_SINGLESTEP;
 
-	target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+	retval = target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* disable interrupts while stepping */
-	mips64_enable_interrupts(target, false);
+	retval = mips64_enable_interrupts(target, false);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* exit debug mode */
-	mips64_ejtag_exit_debug(ejtag_info);
+	retval = mips64_ejtag_exit_debug(ejtag_info);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* registers are now invalid */
-	mips64_invalidate_core_regs(target);
+	retval = mips64_invalidate_core_regs(target);
+	if (retval != ERROR_OK)
+		return retval;
 
-	if (breakpoint)
-		mips_mips64_set_breakpoint(target, breakpoint);
+	if (breakpoint) {
+		retval = mips_mips64_set_breakpoint(target, breakpoint);
+		if (retval != ERROR_OK)
+			return retval;
+	}
 
 	LOG_DEBUG("target stepped ");
 
-	mips_mips64_debug_entry(target);
-	target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+	retval = mips_mips64_debug_entry(target);
+	if (retval != ERROR_OK)
+		return retval;
 
-	return ERROR_OK;
+	return target_call_event_callbacks(target, TARGET_EVENT_HALTED);
 }
 
 static int mips_mips64_add_breakpoint(struct target *target,
@@ -754,8 +769,6 @@ static int mips_mips64_read_memory(struct target *target, uint64_t address,
 	retval = mips64_pracc_read_mem(ejtag_info, address, size, count,
 				       (void *)t);
 
-	/* mips32_..._read_mem with size 4/2 returns uint32_t/uint16_t in host */
-	/* endianness, but byte array should represent target endianness       */
 	if (ERROR_OK != retval) {
 		LOG_ERROR("mips64_pracc_read_mem filed");
 		goto read_done;
@@ -883,8 +896,6 @@ static int mips_mips64_write_memory(struct target *target, uint64_t address,
 
 	void *t = NULL;
 	if (size > 1) {
-		/* mips32_..._write_mem with size 4/2 requires uint32_t/uint16_t in host */
-		/* endianness, but byte array represents target endianness               */
 		t = calloc(count,size);
 		if (!t) {
 			LOG_ERROR("unable to allocate t for write buffer");
@@ -950,7 +961,6 @@ static int mips_mips64_examine(struct target *target)
 	int retval;
 	struct mips64_common *mips64 = target->arch_info;
 
-	/* init rest of ejtag interface */
 	retval = mips_ejtag_init(&mips64->ejtag_info);
 	if (retval != ERROR_OK)
 		return retval;
