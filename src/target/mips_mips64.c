@@ -181,7 +181,9 @@ static int mips_mips64_assert_reset(struct target *target)
 	target->state = TARGET_RESET;
 	jtag_add_sleep(5000);
 
-	mips64_invalidate_core_regs(target);
+	retval = mips64_invalidate_core_regs(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	if (target->reset_halt) {
 		int retval = target_halt(target);
@@ -213,15 +215,20 @@ static int mips_mips64_single_step_core(struct target *target)
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips_ejtag *ejtag_info = &mips64->ejtag_info;
+	int retval;
 
 	/* configure single step mode */
 	mips64_ejtag_config_step(ejtag_info, 1);
 
 	/* disable interrupts while stepping */
-	mips64_enable_interrupts(target, false);
+	retval = mips64_enable_interrupts(target, false);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* exit debug mode */
-	mips64_ejtag_exit_debug(ejtag_info);
+	retval = mips64_ejtag_exit_debug(ejtag_info);
+	if (retval != ERROR_OK)
+		return retval;
 
 	mips_mips64_debug_entry(target);
 
@@ -426,6 +433,29 @@ static int mips_mips64_enable_watchpoints(struct target *target)
 	return ERROR_OK;
 }
 
+static int mips_mips64_unset_bkpt_hard(struct target *target,
+				       struct breakpoint *breakpoint)
+{
+	struct mips64_common *mips64 = target->arch_info;
+	struct mips64_comparator *comparator_list = mips64->inst_break_list;
+	int retval, bp_num;
+
+	bp_num = breakpoint->set - 1;
+
+	if ((bp_num < 0) || (bp_num >= mips64->num_inst_bpoints)) {
+		LOG_DEBUG("Invalid FP Comparator number in breakpoint (bpid: %d)",
+			  breakpoint->unique_id);
+		return ERROR_OK;
+	}
+
+	LOG_DEBUG("bpid: %d - releasing hw: %d", breakpoint->unique_id, bp_num);
+	comparator_list[bp_num].used = false;
+	comparator_list[bp_num].bp_value = 0;
+
+	return target_write_u64(target,
+				comparator_list[bp_num].reg_address + 0x18, 0);
+}
+
 static int mips_mips64_unset_breakpoint(struct target *target,
 					struct breakpoint *breakpoint)
 {
@@ -433,25 +463,14 @@ static int mips_mips64_unset_breakpoint(struct target *target,
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips64_comparator *comparator_list = mips64->inst_break_list;
 	int retval;
+
 	if (!breakpoint->set) {
 		LOG_WARNING("breakpoint not set");
 		return ERROR_OK;
 	}
 
 	if (breakpoint->type == BKPT_HARD) {
-		int bp_num = breakpoint->set - 1;
-		if ((bp_num < 0) || (bp_num >= mips64->num_inst_bpoints)) {
-			LOG_DEBUG("Invalid FP Comparator number in breakpoint (bpid: %d)",
-					  breakpoint->unique_id);
-			return ERROR_OK;
-		}
-		LOG_DEBUG("bpid: %d - releasing hw: %d",
-				breakpoint->unique_id,
-				bp_num);
-		comparator_list[bp_num].used = false;
-		comparator_list[bp_num].bp_value = 0;
-		target_write_u64(target, comparator_list[bp_num].reg_address + 0x18, 0);
-
+		retval = mips_mips64_unset_bkpt_hard(target, breakpoint);
 	} else {
 		/* restore original instruction (kept in target endianness) */
 		LOG_DEBUG("bpid: %d", breakpoint->unique_id);
@@ -528,37 +547,63 @@ static int mips_mips64_resume(struct target *target, int current, uint64_t addre
 
 	resume_pc = buf_get_u64(pc->value, 0, 64);
 
-	mips64_restore_context(target);
+	retval = mips64_restore_context(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* the front-end may request us not to handle breakpoints */
 	if (handle_breakpoints) {
 		/* Single step past breakpoint at current address */
 		breakpoint = breakpoint_find(target, (uint64_t) resume_pc);
 		if (breakpoint) {
-			LOG_DEBUG("unset breakpoint at 0x%16.16" PRIx64 "", breakpoint->address);
-			mips_mips64_unset_breakpoint(target, breakpoint);
-			mips_mips64_single_step_core(target);
-			mips_mips64_set_breakpoint(target, breakpoint);
+			LOG_DEBUG("unset breakpoint at 0x%16.16" PRIx64 "",
+				  breakpoint->address);
+			retval = mips_mips64_unset_breakpoint(target, breakpoint);
+			if (retval != ERROR_OK)
+				return retval;
+
+			retval = mips_mips64_single_step_core(target);
+			if (retval != ERROR_OK)
+				return retval;
+
+			retval = mips_mips64_set_breakpoint(target, breakpoint);
+			if (retval != ERROR_OK)
+				return retval;
 		}
 	}
 
 	/* enable interrupts if we are running */
-	mips64_enable_interrupts(target, !debug_execution);
+	retval = mips64_enable_interrupts(target, !debug_execution);
+	if (retval != ERROR_OK)
+		return retval;
 
 	/* exit debug mode */
-	mips64_ejtag_exit_debug(ejtag_info);
+	retval = mips64_ejtag_exit_debug(ejtag_info);
+	if (retval != ERROR_OK)
+		return retval;
+
 	target->debug_reason = DBG_REASON_NOTHALTED;
 
 	/* registers are now invalid */
-	mips64_invalidate_core_regs(target);
+	retval = mips64_invalidate_core_regs(target);
+	if (retval != ERROR_OK)
+		return retval;
 
 	if (!debug_execution) {
 		target->state = TARGET_RUNNING;
-		target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+		retval = target_call_event_callbacks(target,
+						     TARGET_EVENT_RESUMED);
+		if (retval != ERROR_OK)
+			return retval;
+
 		LOG_DEBUG("target resumed at 0x%" PRIx64 "", resume_pc);
 	} else {
 		target->state = TARGET_DEBUG_RUNNING;
-		target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
+		retval = target_call_event_callbacks(target,
+						     TARGET_EVENT_DEBUG_RESUMED);
+		if (retval != ERROR_OK)
+			return retval;
+
 		LOG_DEBUG("target debug resumed at 0x%" PRIx64 "", resume_pc);
 	}
 
