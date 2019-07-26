@@ -446,8 +446,6 @@ alloc_fail:
 int mips64_init_arch_info(struct target *target, struct mips64_common *mips64,
 			  struct jtag_tap *tap)
 {
-	target->arch_info = mips64;
-
 	mips64->bp_scanned = false;
 	mips64->common_magic = MIPS64_COMMON_MAGIC;
 	mips64->data_break_list = NULL;
