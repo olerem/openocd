@@ -355,6 +355,7 @@ int mips64_restore_context(struct target *target)
 int mips64_arch_state(struct target *target)
 {
 	struct mips64_common *mips64 = target->arch_info;
+	struct reg *pc = &mips64->core_cache->reg_list[MIPS64_PC];
 
 	if (mips64->common_magic != MIPS64_COMMON_MAGIC) {
 		LOG_ERROR("BUG: called for a non-MIPS64 target");
@@ -362,9 +363,7 @@ int mips64_arch_state(struct target *target)
 	}
 
 	LOG_USER("target halted due to %s, pc: 0x%" PRIx64 "",
-		debug_reason_name(target),
-		buf_get_u64(mips64->core_cache->reg_list[MIPS64_PC].value,
-			    0, 64));
+		 debug_reason_name(target), buf_get_u64(pc->value, 0, 64));
 
 	return ERROR_OK;
 }
