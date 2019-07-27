@@ -199,6 +199,7 @@ struct mips64_core_reg {
 #define MIPS64_DRET			0x4200001F
 #define MIPS64_SDBBP			0x7000003F
 #define MIPS64_SDBBP_LE			0x3f000007
+#define MIPS64_SDBBP_SIZE		4
 
 #define MIPS64_SYNC			0x0000000F
 
