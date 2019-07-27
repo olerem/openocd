@@ -237,18 +237,18 @@ static int mips_mips64_single_step_core(struct target *target)
 }
 
 static int mips_mips64_set_breakpoint(struct target *target,
-				      struct breakpoint *breakpoint)
+				      struct breakpoint *bp)
 {
 	struct mips64_common *mips64 = target->arch_info;
 	struct mips64_comparator *comparator_list = mips64->inst_break_list;
 	int retval;
 
-	if (breakpoint->set) {
+	if (bp->set) {
 		LOG_WARNING("breakpoint already set");
 		return ERROR_OK;
 	}
 
-	if (breakpoint->type == BKPT_HARD) {
+	if (bp->type == BKPT_HARD) {
 		int bp_num = 0;
 		uint64_t bp_value;
 
@@ -256,14 +256,14 @@ static int mips_mips64_set_breakpoint(struct target *target,
 			bp_num++;
 		if (bp_num >= mips64->num_inst_bpoints) {
 			LOG_DEBUG("ERROR Can not find free FP Comparator(bpid: %d)",
-					  breakpoint->unique_id);
+					  bp->unique_id);
 			LOG_WARNING("ERROR Can not find free FP Comparator");
 			exit(-1);
 		}
-		breakpoint->set = bp_num + 1;
+		bp->set = bp_num + 1;
 		comparator_list[bp_num].used = true;
-		comparator_list[bp_num].bp_value = breakpoint->address;
-		bp_value = breakpoint->address;
+		comparator_list[bp_num].bp_value = bp->address;
+		bp_value = bp->address;
 
 		if (bp_value & 0x80000000)
 			bp_value |= ULLONG_MAX << 32;
@@ -272,54 +272,54 @@ static int mips_mips64_set_breakpoint(struct target *target,
 		target_write_u64(target, comparator_list[bp_num].reg_address + 0x08, 0x00000000);
 		target_write_u64(target, comparator_list[bp_num].reg_address + 0x18, 1);
 		LOG_DEBUG("bpid: %d, bp_num %i bp_value 0x%" PRIx64 "",
-				  breakpoint->unique_id,
+				  bp->unique_id,
 				  bp_num, comparator_list[bp_num].bp_value);
-	} else if (breakpoint->type == BKPT_SOFT) {
-		LOG_DEBUG("bpid: %d", breakpoint->unique_id);
-		if (breakpoint->length == 4) {
+	} else if (bp->type == BKPT_SOFT) {
+		LOG_DEBUG("bpid: %d", bp->unique_id);
+		if (bp->length == 4) {
 			uint32_t verify = 0xffffffff;
-			retval = target_read_memory(target, breakpoint->address,
-						    breakpoint->length, 1,
-						    breakpoint->orig_instr);
+			retval = target_read_memory(target, bp->address,
+						    bp->length, 1,
+						    bp->orig_instr);
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_write_u32(target, breakpoint->address,
+			retval = target_write_u32(target, bp->address,
 						  MIPS64_SDBBP);
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_read_u32(target, breakpoint->address,
+			retval = target_read_u32(target, bp->address,
 						 &verify);
 			if (retval != ERROR_OK)
 				return retval;
 			if (verify != MIPS64_SDBBP) {
-				LOG_ERROR("Unable to set 32bit breakpoint at address %16" PRIx64, breakpoint->address);
+				LOG_ERROR("Unable to set 32bit breakpoint at address %16" PRIx64, bp->address);
 				return ERROR_OK;
 			}
 		} else {
 			uint16_t verify = 0xffff;
 			/* micro mips request bit */
-			uint32_t isa_req = breakpoint->length & 1;
+			uint32_t isa_req = bp->length & 1;
 
-			retval = target_read_memory(target, breakpoint->address,
-						    breakpoint->length, 1,
-						    breakpoint->orig_instr);
+			retval = target_read_memory(target, bp->address,
+						    bp->length, 1,
+						    bp->orig_instr);
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_write_u16(target, breakpoint->address,
+			retval = target_write_u16(target, bp->address,
 						  MIPS16_SDBBP(isa_req));
 			if (retval != ERROR_OK)
 				return retval;
-			retval = target_read_u16(target, breakpoint->address,
+			retval = target_read_u16(target, bp->address,
 						 &verify);
 			if (retval != ERROR_OK)
 				return retval;
 			if (verify != MIPS16_SDBBP(isa_req)) {
-				LOG_ERROR("Unable to set 16bit breakpoint at address %16" PRIx64, breakpoint->address);
+				LOG_ERROR("Unable to set 16bit breakpoint at address %16" PRIx64, bp->address);
 				return ERROR_OK;
 			}
 		}
 
-		breakpoint->set = 20; /* Any nice value but 0 */
+		bp->set = 20; /* Any nice value but 0 */
 	}
 
 	return ERROR_OK;
@@ -327,17 +327,17 @@ static int mips_mips64_set_breakpoint(struct target *target,
 
 static int mips_mips64_enable_breakpoints(struct target *target)
 {
-	struct breakpoint *breakpoint = target->breakpoints;
+	struct breakpoint *bp = target->breakpoints;
 	int retval = ERROR_OK;
 
 	/* set any pending breakpoints */
-	while (breakpoint) {
-		if (breakpoint->set == 0) {
-			retval = mips_mips64_set_breakpoint(target, breakpoint);
+	while (bp) {
+		if (!bp->set) {
+			retval = mips_mips64_set_breakpoint(target, bp);
 			if (retval != ERROR_OK)
 				return retval;
 		}
-		breakpoint = breakpoint->next;
+		bp = bp->next;
 	}
 
 	return ERROR_OK;
