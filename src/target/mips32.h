@@ -393,6 +393,7 @@ struct mips32_algorithm {
 #define MIPS32_SDBBP(isa)			(isa ? MMIPS32_SDBBP : MIPS32_ISA_SDBBP)
 
 #define MIPS16_SDBBP(isa)			(isa ? MMIPS16_SDBBP : MIPS16_ISA_SDBBP)
+#define MIPS16_SDBBP_SIZE			2
 
 extern const struct command_registration mips32_command_handlers[];
 
