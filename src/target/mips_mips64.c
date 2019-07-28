@@ -236,6 +236,7 @@ static int mips_mips64_single_step_core(struct target *target)
 	return ERROR_OK;
 }
 
+/* TODO: HW breakpoints are probaba*/
 static int mips_mips64_set_hwbp(struct target *target, struct breakpoint *bp)
 {
 	struct mips64_common *mips64 = target->arch_info;
@@ -262,15 +263,21 @@ static int mips_mips64_set_hwbp(struct target *target, struct breakpoint *bp)
 	if (bp_value & 0x80000000)
 		bp_value |= ULLONG_MAX << 32;
 
+	/* Instruction Breakpoint Address n (IBAn) Register */
 	retval = target_write_u64(target, c->reg_address, bp_value);
 	if (retval != ERROR_OK)
 		return retval;
 
 	/* TODO: use defines */
+	/* Instruction Breakpoint Address Mask n (IBMn) Register */
 	retval = target_write_u64(target, c->reg_address + 0x08, 0);
 	if (retval != ERROR_OK)
 		return retval;
 
+	/* TODO: Should we support ASID? Instruction Breakpoint ASID n (IBASIDn)
+	 * Register */
+
+	/* Instruction Breakpoint Control n (IBCn) Register */
 	retval = target_write_u64(target, c->reg_address + 0x18, 1);
 	if (retval != ERROR_OK)
 		return retval;
@@ -281,6 +288,8 @@ static int mips_mips64_set_hwbp(struct target *target, struct breakpoint *bp)
 	return ERROR_OK;
 }
 
+/* TODO: is it MIPS64 or MIPS32 instruction. If MIPS32, can it be shared with
+ * MIPS32 code? */
 static int mips_mips64_set_sdbbp(struct target *target, struct breakpoint *bp)
 {
 	uint32_t verify;
@@ -307,6 +316,8 @@ static int mips_mips64_set_sdbbp(struct target *target, struct breakpoint *bp)
 	return retval;
 }
 
+/* TODO do MIPS64 support MIPS16 instructions? Can it be shared with MIPS32
+ * code? */
 static int mips_mips16_set_sdbbp(struct target *target, struct breakpoint *bp)
 {
 	uint32_t isa_req = bp->length & 1;
