@@ -236,7 +236,7 @@ static int mips_mips64_single_step_core(struct target *target)
 	return ERROR_OK;
 }
 
-/* TODO: HW breakpoints are probaba*/
+/* TODO: HW breakpoints are in EJTAG spec. Should we share it for MIPS32? */
 static int mips_mips64_set_hwbp(struct target *target, struct breakpoint *bp)
 {
 	struct mips64_common *mips64 = target->arch_info;
@@ -400,13 +400,15 @@ static int mips_mips64_enable_breakpoints(struct target *target)
 	return ERROR_OK;
 }
 
+/* TODO: HW data breakpoints are in EJTAG spec. Should we share it for MIPS32? */
 static int mips_mips64_set_watchpoint(struct target *target,
 				      struct watchpoint *watchpoint)
 {
 	uint64_t wp_value;
 	struct mips64_common *mips64 = target->arch_info;
-	struct mips64_comparator *comparator_list = mips64->data_break_list;
-	int wp_num = 0;
+	struct mips64_comparator *c, *cl = mips64->data_break_list;
+	int retval, wp_num = 0;
+
 	/*
 	 * watchpoint enabled, ignore all byte lanes in value register
 	 * and exclude both load and store accesses from  watchpoint
@@ -420,8 +422,9 @@ static int mips_mips64_set_watchpoint(struct target *target,
 		return ERROR_OK;
 	}
 
-	while (comparator_list[wp_num].used && (wp_num < mips64->num_data_bpoints))
+	while (cl[wp_num].used && (wp_num < mips64->num_data_bpoints))
 		wp_num++;
+
 	if (wp_num >= mips64->num_data_bpoints) {
 		LOG_ERROR("ERROR Can not find free comparator");
 		return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
@@ -438,37 +441,49 @@ static int mips_mips64_set_watchpoint(struct target *target,
 	}
 
 	switch (watchpoint->rw)	{
-		case WPT_READ:
-			enable &= ~EJTAG_DBCn_NOLB;
-			break;
-		case WPT_WRITE:
-			enable &= ~EJTAG_DBCn_NOSB;
-			break;
-		case WPT_ACCESS:
-			enable &= ~(EJTAG_DBCn_NOLB | EJTAG_DBCn_NOSB);
-			break;
-		default:
-			LOG_ERROR("BUG: watchpoint->rw neither read, write nor access");
+	case WPT_READ:
+		enable &= ~EJTAG_DBCn_NOLB;
+		break;
+	case WPT_WRITE:
+		enable &= ~EJTAG_DBCn_NOSB;
+		break;
+	case WPT_ACCESS:
+		enable &= ~(EJTAG_DBCn_NOLB | EJTAG_DBCn_NOSB);
+		break;
+	default:
+		LOG_ERROR("BUG: watchpoint->rw neither read, write nor access");
 	}
 
+	c = &cl[wp_num];
 	watchpoint->set = wp_num + 1;
-	comparator_list[wp_num].used = true;
-	comparator_list[wp_num].bp_value = watchpoint->address;
+	c->used = true;
+	c->bp_value = watchpoint->address;
 
 	wp_value = watchpoint->address;
 	if (wp_value & 0x80000000)
 		wp_value |= ULLONG_MAX << 32;
 
-	target_write_u64(target, comparator_list[wp_num].reg_address, wp_value);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x08,
-			 0x00000000);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x10,
-			 0x00000000);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x18,
-			 enable);
-	target_write_u64(target, comparator_list[wp_num].reg_address + 0x20, 0);
-	LOG_DEBUG("wp_num %i bp_value 0x%" PRIx64 "", wp_num,
-		  comparator_list[wp_num].bp_value);
+	retval = target_write_u64(target, c->reg_address, wp_value);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u64(target, c->reg_address + 0x08, 0);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u64(target, c->reg_address + 0x10, 0);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u64(target, c->reg_address + 0x18, enable);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u64(target, c->reg_address + 0x20, 0);
+	if (retval != ERROR_OK)
+		return retval;
+
+	LOG_DEBUG("wp_num %i bp_value 0x%" PRIx64 "", wp_num, c->bp_value);
 
 	return ERROR_OK;
 }
