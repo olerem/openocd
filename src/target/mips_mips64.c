@@ -236,11 +236,107 @@ static int mips_mips64_single_step_core(struct target *target)
 	return ERROR_OK;
 }
 
+static int mips_mips64_set_hwbp(struct target *target, struct breakpoint *bp)
+{
+	struct mips64_common *mips64 = target->arch_info;
+	struct mips64_comparator *c, *cl = mips64->inst_break_list;
+	uint64_t bp_value;
+	int retval, bp_num = 0;
+
+	while (cl[bp_num].used && (bp_num < mips64->num_inst_bpoints))
+		bp_num++;
+
+	if (bp_num >= mips64->num_inst_bpoints) {
+		LOG_DEBUG("ERROR Can not find free FP Comparator(bpid: %d)",
+			  bp->unique_id);
+		LOG_WARNING("ERROR Can not find free FP Comparator");
+		exit(-1);
+	}
+
+	c = &cl[bp_num];
+	c->used = true;
+	c->bp_value = bp->address;
+	bp_value = bp->address;
+
+	/* TODO: why do we need it? */
+	if (bp_value & 0x80000000)
+		bp_value |= ULLONG_MAX << 32;
+
+	retval = target_write_u64(target, c->reg_address, bp_value);
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* TODO: use defines */
+	retval = target_write_u64(target, c->reg_address + 0x08, 0);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u64(target, c->reg_address + 0x18, 1);
+	if (retval != ERROR_OK)
+		return retval;
+
+	LOG_DEBUG("bpid: %d, bp_num %i bp_value 0x%" PRIx64 "", bp->unique_id,
+		  bp_num, c->bp_value);
+
+	return ERROR_OK;
+}
+
+static int mips_mips64_set_sdbbp(struct target *target, struct breakpoint *bp)
+{
+	uint32_t verify;
+	int retval;
+
+	retval = target_read_u32(target, bp->address, (uint32_t *)bp->orig_instr);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u32(target, bp->address, MIPS64_SDBBP);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_read_u32(target, bp->address, &verify);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (verify != MIPS64_SDBBP) {
+		LOG_ERROR("Unable to set 32bit breakpoint at address %16" PRIx64,
+			  bp->address);
+		retval = ERROR_FAIL;
+	}
+
+	return retval;
+}
+
+static int mips_mips16_set_sdbbp(struct target *target, struct breakpoint *bp)
+{
+	uint32_t isa_req = bp->length & 1;
+	uint16_t verify;
+	int retval;
+
+	retval = target_read_u16(target, bp->address, (uint16_t *)bp->orig_instr);
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_write_u16(target, bp->address, MIPS16_SDBBP(isa_req));
+	if (retval != ERROR_OK)
+		return retval;
+
+	retval = target_read_u16(target, bp->address, &verify);
+	if (retval != ERROR_OK)
+		return retval;
+
+	if (verify != MIPS16_SDBBP(isa_req)) {
+		LOG_ERROR("Unable to set 16bit breakpoint at address %16" PRIx64,
+			  bp->address);
+		retval = ERROR_FAIL;
+	}
+
+	return retval;
+}
+
 static int mips_mips64_set_breakpoint(struct target *target,
 				      struct breakpoint *bp)
 {
-	struct mips64_common *mips64 = target->arch_info;
-	struct mips64_comparator *comparator_list = mips64->inst_break_list;
 	int retval;
 
 	if (bp->set) {
@@ -249,78 +345,28 @@ static int mips_mips64_set_breakpoint(struct target *target,
 	}
 
 	if (bp->type == BKPT_HARD) {
-		int bp_num = 0;
-		uint64_t bp_value;
-
-		while (comparator_list[bp_num].used && (bp_num < mips64->num_inst_bpoints))
-			bp_num++;
-		if (bp_num >= mips64->num_inst_bpoints) {
-			LOG_DEBUG("ERROR Can not find free FP Comparator(bpid: %d)",
-					  bp->unique_id);
-			LOG_WARNING("ERROR Can not find free FP Comparator");
-			exit(-1);
-		}
-		bp->set = bp_num + 1;
-		comparator_list[bp_num].used = true;
-		comparator_list[bp_num].bp_value = bp->address;
-		bp_value = bp->address;
-
-		if (bp_value & 0x80000000)
-			bp_value |= ULLONG_MAX << 32;
-
-		target_write_u64(target, comparator_list[bp_num].reg_address, bp_value);
-		target_write_u64(target, comparator_list[bp_num].reg_address + 0x08, 0x00000000);
-		target_write_u64(target, comparator_list[bp_num].reg_address + 0x18, 1);
-		LOG_DEBUG("bpid: %d, bp_num %i bp_value 0x%" PRIx64 "",
-				  bp->unique_id,
-				  bp_num, comparator_list[bp_num].bp_value);
-	} else if (bp->type == BKPT_SOFT) {
+		retval = mips_mips64_set_hwbp(target, bp);
+	} else {
 		LOG_DEBUG("bpid: %d", bp->unique_id);
-		if (bp->length == 4) {
-			uint32_t verify = 0xffffffff;
-			retval = target_read_memory(target, bp->address,
-						    bp->length, 1,
-						    bp->orig_instr);
-			if (retval != ERROR_OK)
-				return retval;
-			retval = target_write_u32(target, bp->address,
-						  MIPS64_SDBBP);
-			if (retval != ERROR_OK)
-				return retval;
-			retval = target_read_u32(target, bp->address,
-						 &verify);
-			if (retval != ERROR_OK)
-				return retval;
-			if (verify != MIPS64_SDBBP) {
-				LOG_ERROR("Unable to set 32bit breakpoint at address %16" PRIx64, bp->address);
-				return ERROR_OK;
-			}
-		} else {
-			uint16_t verify = 0xffff;
-			/* micro mips request bit */
-			uint32_t isa_req = bp->length & 1;
 
-			retval = target_read_memory(target, bp->address,
-						    bp->length, 1,
-						    bp->orig_instr);
-			if (retval != ERROR_OK)
-				return retval;
-			retval = target_write_u16(target, bp->address,
-						  MIPS16_SDBBP(isa_req));
-			if (retval != ERROR_OK)
-				return retval;
-			retval = target_read_u16(target, bp->address,
-						 &verify);
-			if (retval != ERROR_OK)
-				return retval;
-			if (verify != MIPS16_SDBBP(isa_req)) {
-				LOG_ERROR("Unable to set 16bit breakpoint at address %16" PRIx64, bp->address);
-				return ERROR_OK;
-			}
+		switch (bp->length) {
+		case MIPS64_SDBBP_SIZE:
+			retval = mips_mips64_set_sdbbp(target, bp);
+			break;
+		case MIPS16_SDBBP_SIZE:
+			retval = mips_mips16_set_sdbbp(target, bp);
+			break;
+		default:
+			retval = ERROR_FAIL;
 		}
-
-		bp->set = 20; /* Any nice value but 0 */
 	}
+
+	if (retval != ERROR_OK) {
+		LOG_ERROR("can't unset breakpoint. Some thing wrong happened");
+		return retval;
+	}
+
+	bp->set = true;
 
 	return ERROR_OK;
 }
