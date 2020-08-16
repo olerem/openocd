@@ -1,0 +1,4 @@
+--- tools/git2cl
++++ tools/git2cl
+@@ -1 +0,0 @@
+-Subproject commit 8373c9f74993e218a08819cbcdbab3f3564bbeba
