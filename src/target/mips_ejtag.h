@@ -38,6 +38,7 @@
 #define EJTAG_INST_TCBCONTROLA	0x10
 #define EJTAG_INST_TCBCONTROLB	0x11
 #define EJTAG_INST_TCBDATA		0x12
+#define EJTAG_INST_FDC			0x17
 #define EJTAG_INST_BYPASS		0xFF
 
 /* microchip PIC32MX specific instructions */
@@ -135,6 +136,7 @@
 #define EJTAG_DCR_IB			(1 << 16)
 #define EJTAG_DCR_INTE			(1 << 4)
 #define EJTAG_DCR_MP			(1 << 2)
+#define EJTAG_DCR_FDC			(1 << 18)
 
 /* breakpoint support */
 /* EJTAG_V20_* was tested on Broadcom BCM7401
@@ -144,7 +146,7 @@
 #define EJTAG_V20_IBC_OFFS		0x4	/* IBC Offset */
 #define EJTAG_V20_IBM_OFFS		0x8
 #define EJTAG_V20_IBAn_STEP		0x10	/* Offset for next channel */
-#define EJTAG_V20_DBS			0xFF30008
+#define EJTAG_V20_DBS			0xFF300008
 #define EJTAG_V20_DBA0			0xFF300200
 #define EJTAG_V20_DBC_OFFS		0x4
 #define EJTAG_V20_DBM_OFFS		0x8
