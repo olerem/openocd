@@ -93,6 +93,8 @@ extern struct target_type cortexa_target;
 extern struct target_type cortexr4_target;
 extern struct target_type arm11_target;
 extern struct target_type mips_m4k_target;
+extern struct target_type mips_mAptiv_target;
+extern struct target_type mips_iAptiv_target;
 extern struct target_type avr_target;
 extern struct target_type dsp563xx_target;
 extern struct target_type dsp5680xx_target;
@@ -122,6 +124,8 @@ static struct target_type *target_types[] = {
 	&cortexr4_target,
 	&arm11_target,
 	&mips_m4k_target,
+	&mips_mAptiv_target,
+	&mips_iAptiv_target,
 	&avr_target,
 	&dsp563xx_target,
 	&dsp5680xx_target,
@@ -906,7 +910,7 @@ int target_run_flash_async_algorithm(struct target *target,
 		}
 
 		LOG_DEBUG("offs 0x%zx count 0x%" PRIx32 " wp 0x%" PRIx32 " rp 0x%" PRIx32,
-			(size_t) (buffer - buffer_orig), count, wp, rp);
+			(buffer - buffer_orig), count, wp, rp);
 
 		if (rp == 0) {
 			LOG_ERROR("flash write algorithm aborted by target");
@@ -1143,7 +1147,8 @@ int target_profiling(struct target *target, uint32_t *samples,
  * Reset the @c examined flag for the given target.
  * Pure paranoia -- targets are zeroed on allocation.
  */
-static void target_reset_examined(struct target *target)
+//static void target_reset_examined(struct target *target)
+void target_reset_examined(struct target *target)
 {
 	target->examined = false;
 }
@@ -2425,13 +2430,7 @@ static int handle_target(void *priv)
 			if (target->backoff.times > 0) {
 				LOG_USER("Polling target %s succeeded again, trying to reexamine", target_name(target));
 				target_reset_examined(target);
-				retval = target_examine_one(target);
-				/* Target examination could have failed due to unstable connection,
-				 * but we set the examined flag anyway to repoll it later */
-				if (retval != ERROR_OK) {
-					target->examined = true;
-					return retval;
-				}
+				target_examine_one(target);
 			}
 
 			target->backoff.times = 0;
@@ -3310,10 +3309,9 @@ static int handle_bp_command_set(struct command_context *cmd_ctx,
 		uint32_t addr, uint32_t asid, uint32_t length, int hw)
 {
 	struct target *target = get_current_target(cmd_ctx);
-	int retval;
 
 	if (asid == 0) {
-		retval = breakpoint_add(target, addr, length, hw);
+		int retval = breakpoint_add(target, addr, length, hw);
 		if (ERROR_OK == retval)
 			command_print(cmd_ctx, "breakpoint set at 0x%8.8" PRIx32 "", addr);
 		else {
@@ -3321,11 +3319,7 @@ static int handle_bp_command_set(struct command_context *cmd_ctx,
 			return retval;
 		}
 	} else if (addr == 0) {
-		if (target->type->add_context_breakpoint == NULL) {
-			LOG_WARNING("Context breakpoint not available");
-			return ERROR_OK;
-		}
-		retval = context_breakpoint_add(target, asid, length, hw);
+		int retval = context_breakpoint_add(target, asid, length, hw);
 		if (ERROR_OK == retval)
 			command_print(cmd_ctx, "Context breakpoint set at 0x%8.8" PRIx32 "", asid);
 		else {
@@ -3333,11 +3327,7 @@ static int handle_bp_command_set(struct command_context *cmd_ctx,
 			return retval;
 		}
 	} else {
-		if (target->type->add_hybrid_breakpoint == NULL) {
-			LOG_WARNING("Hybrid breakpoint not available");
-			return ERROR_OK;
-		}
-		retval = hybrid_breakpoint_add(target, addr, asid, length, hw);
+		int retval = hybrid_breakpoint_add(target, addr, asid, length, hw);
 		if (ERROR_OK == retval)
 			command_print(cmd_ctx, "Hybrid breakpoint set at 0x%8.8" PRIx32 "", asid);
 		else {
@@ -3520,12 +3510,14 @@ static void writeData(FILE *f, const void *data, size_t len)
 		LOG_ERROR("failed to write %zu bytes: %s", len, strerror(errno));
 }
 
-static void writeLong(FILE *f, int l, struct target *target)
+static void writeLong(FILE *f, int l)
 {
-	uint8_t val[4];
+	int i;
+	for (i = 0; i < 4; i++) {
+		char c = (l >> (i*8))&0xff;
+		writeData(f, &c, 1);
+	}
 
-	target_buffer_set_u32(target, val, l);
-	writeData(f, val, 4);
 }
 
 static void writeString(FILE *f, char *s)
@@ -3536,18 +3528,18 @@ static void writeString(FILE *f, char *s)
 typedef unsigned char UNIT[2];  /* unit of profiling */
 
 /* Dump a gmon.out histogram file. */
-static void write_gmon(uint32_t *samples, uint32_t sampleNum, const char *filename, bool with_range,
-			uint32_t start_address, uint32_t end_address, struct target *target)
+static void write_gmon(uint32_t *samples, uint32_t sampleNum, const char *filename,
+		bool with_range, uint32_t start_address, uint32_t end_address)
 {
 	uint32_t i;
 	FILE *f = fopen(filename, "w");
 	if (f == NULL)
 		return;
 	writeString(f, "gmon");
-	writeLong(f, 0x00000001, target); /* Version */
-	writeLong(f, 0, target); /* padding */
-	writeLong(f, 0, target); /* padding */
-	writeLong(f, 0, target); /* padding */
+	writeLong(f, 0x00000001); /* Version */
+	writeLong(f, 0); /* padding */
+	writeLong(f, 0); /* padding */
+	writeLong(f, 0); /* padding */
 
 	uint8_t zero = 0;  /* GMON_TAG_TIME_HIST */
 	writeData(f, &zero, 1);
@@ -3602,10 +3594,10 @@ static void write_gmon(uint32_t *samples, uint32_t sampleNum, const char *filena
 	}
 
 	/* append binary memory gmon.out &profile_hist_hdr ((char*)&profile_hist_hdr + sizeof(struct gmon_hist_hdr)) */
-	writeLong(f, min, target);			/* low_pc */
-	writeLong(f, max, target);			/* high_pc */
-	writeLong(f, numBuckets, target);	/* # of buckets */
-	writeLong(f, 100, target);			/* KLUDGE! We lie, ca. 100Hz best case. */
+	writeLong(f, min);			/* low_pc */
+	writeLong(f, max);			/* high_pc */
+	writeLong(f, numBuckets);	/* # of buckets */
+	writeLong(f, 100);			/* KLUDGE! We lie, ca. 100Hz best case. */
 	writeString(f, "seconds");
 	for (i = 0; i < (15-strlen("seconds")); i++)
 		writeData(f, &zero, 1);
@@ -3697,7 +3689,7 @@ COMMAND_HANDLER(handle_profile_command)
 	}
 
 	write_gmon(samples, num_of_samples, CMD_ARGV[1],
-		   with_range, start_address, end_address, target);
+			with_range, start_address, end_address);
 	command_print(CMD_CTX, "Wrote %s", CMD_ARGV[1]);
 
 	free(samples);
