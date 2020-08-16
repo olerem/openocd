@@ -126,6 +126,34 @@ static inline uint32_t buf_get_u32(const uint8_t *_buffer,
 	}
 }
 
+static inline uint64_t buf_get_u38(const void *_buffer,
+	unsigned first, unsigned num)
+{
+	const uint8_t *buffer = _buffer;
+
+	if ((num == 32) && (first == 0)) {
+		return 0 + ((((uint32_t)buffer[3]) << 24) |   /* Note - zero plus is to avoid a checkpatch bug */
+				(((uint32_t)buffer[2]) << 16) |
+				(((uint32_t)buffer[1]) << 8)  |
+				(((uint32_t)buffer[0]) << 0));
+	} else if ((num == 38) && (first == 0)) {
+		return 0 + ((((uint64_t)buffer[6]) << 48) |   /* Note - zero plus is to avoid a checkpatch bug */
+				(((uint64_t)buffer[5]) << 40) |
+				(((uint64_t)buffer[4]) << 32) |
+				(((uint64_t)buffer[3]) << 24) |
+				(((uint64_t)buffer[2]) << 16) |
+				(((uint64_t)buffer[1]) << 8)  |
+				(((uint64_t)buffer[0]) << 0));
+	} else {
+		uint64_t result = 0;
+		for (unsigned i = first; i < first + num; i++) {
+			if (((buffer[i / 5] >> (i % 5)) & 1) == 1)
+				result = result | ((uint64_t)1 << (uint64_t)(i - first));
+		}
+		return result;
+	}
+}
+
 /**
  * Retrieves @c num bits from @c _buffer, starting at the @c first bit,
  * returning the bits in a 64-bit word.  This routine fast-paths reads
