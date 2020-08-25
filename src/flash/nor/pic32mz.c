@@ -75,32 +75,32 @@
 
 /* pic32mz flash controller register locations */
 
-#define PIC32MZ_NVMCON		0xBF800600  
-#define PIC32MZ_NVMCONCLR	0xBF800604  
-#define PIC32MZ_NVMCONSET	0xBF800608  
-#define PIC32MZ_NVMCONINV	0xBF80060C  
+#define PIC32MZ_NVMCON		0xBF800600
+#define PIC32MZ_NVMCONCLR	0xBF800604
+#define PIC32MZ_NVMCONSET	0xBF800608
+#define PIC32MZ_NVMCONINV	0xBF80060C
 #define NVMCON_NVMWR		(1 << 15)  
 #define NVMCON_NVMWREN		(1 << 14)  
 #define NVMCON_NVMERR		(1 << 13)  
 #define NVMCON_LVDERR		(1 << 12)  
 // #define NVMCON_LVDSTAT	// NOT available in PIC32MZ devices... was in PIC32MX
-#define NVMCON_OP_PFM_ERASE	0x7  
-#define NVMCON_OP_PAGE_ERASE	0x4  
-#define NVMCON_OP_ROW_PROG	0x3  
-#define NVMCON_OP_WORD_PROG	0x1  
+#define NVMCON_OP_PFM_ERASE		0x7
+#define NVMCON_OP_PAGE_ERASE		0x4
+#define NVMCON_OP_ROW_PROG		0x3
+#define NVMCON_OP_WORD_PROG		0x1
 #define NVMCON_OP_QUAD_WORD_PROG	0x2
-#define NVMCON_OP_NOP		0x0  
+#define NVMCON_OP_NOP			0x0
 
-#define PIC32MZ_NVMKEY		0xBF800610  
-#define PIC32MZ_NVMADDR		0xBF800620  
-#define PIC32MZ_NVMADDRCLR	0xBF800624   
-#define PIC32MZ_NVMADDRSET	0xBF800628  
-#define PIC32MZ_NVMADDRINV	0xBF80062C  
-#define PIC32MZ_NVMDATA0	0xBF800630  
-#define PIC32MZ_NVMDATA1	0xBF800640  
-#define PIC32MZ_NVMDATA2	0xBF800650  
-#define PIC32MZ_NVMDATA3	0xBF800660  
-#define PIC32MZ_NVMSRCADDR	0xBF800670  
+#define PIC32MZ_NVMKEY		0xBF800610
+#define PIC32MZ_NVMADDR		0xBF800620
+#define PIC32MZ_NVMADDRCLR	0xBF800624
+#define PIC32MZ_NVMADDRSET	0xBF800628
+#define PIC32MZ_NVMADDRINV	0xBF80062C
+#define PIC32MZ_NVMDATA0	0xBF800630
+#define PIC32MZ_NVMDATA1	0xBF800640
+#define PIC32MZ_NVMDATA2	0xBF800650
+#define PIC32MZ_NVMDATA3	0xBF800660
+#define PIC32MZ_NVMSRCADDR	0xBF800670
 #define PIC32MZ_DEVCFG3		0xBFC0FFC0
 #define PIC32MZ_NVMPWP          0xBF800680
 #define PIC32MZ_NVMBWP          0xBF800690
@@ -111,8 +111,8 @@
 
 /* flash unlock keys */
 
-#define NVMKEY1			0xAA996655  
-#define NVMKEY2			0x556699AA  
+#define NVMKEY1			0xAA996655
+#define NVMKEY2			0x556699AA
 
 
 
@@ -259,8 +259,6 @@ static const struct pic32mz_devs_s *pic32mz_lookup_device(uint32_t device_id)
 	}
 	return NULL;
 }
-
-
 
 /* flash bank pic32mz <base> <size> 0 0 <target#>
  */
@@ -623,7 +621,7 @@ static uint32_t pic32mz_flash_write_code[] = {
 	0x00000000,		/* nop */
 	/*    if ((*NVMCON & 0x3000) != 0) {
 		      goto error;
-	      } 
+	      }
 	*/
 	0x8D510000,		/* lw $s1, 0($t2) */
 	0x32313000,		/* andi $s1, $s1, 0x3000 */
@@ -805,7 +803,7 @@ static int pic32mz_write_quad_words(struct flash_bank *bank, uint32_t address, c
 		LOG_WARNING("address 0x%" PRIx32 "breaks required 16-byte alignment for PIC32MZ quad-word programming", address);
 		return ERROR_FLASH_DST_BREAKS_ALIGNMENT;
 	}
-	
+
 	while (words_remaining != 0) {
 		uint32_t chunk_words = (words_remaining > 4 ? 4 : words_remaining);
 		uint32_t words[4];
@@ -1057,7 +1055,7 @@ COMMAND_HANDLER(pic32mz_handle_pgm_word_command)
 		return retval;
 
 	if (address < bank->base || address >= (bank->base + bank->size)) {
-		command_print(CMD_CTX, "flash address '%s' is out of bounds", CMD_ARGV[0]);
+		command_print(CMD, "flash address '%s' is out of bounds", CMD_ARGV[0]);
 		return ERROR_OK;
 	}
 
@@ -1069,9 +1067,9 @@ COMMAND_HANDLER(pic32mz_handle_pgm_word_command)
 		res = ERROR_FLASH_OPERATION_FAILED;
 
 	if (res == ERROR_OK)
-		command_print(CMD_CTX, "pic32mz pgm word complete");
+		command_print(CMD, "pic32mz pgm word complete");
 	else
-		command_print(CMD_CTX, "pic32mz pgm word failed (status = 0x%x)", status);
+		command_print(CMD, "pic32mz pgm word failed (status = 0x%x)", status);
 
 	return ERROR_OK;
 }
@@ -1085,7 +1083,7 @@ COMMAND_HANDLER(pic32mz_handle_unlock_command)
 	int timeout = 10;
 
 	if (CMD_ARGC < 1) {
-		command_print(CMD_CTX, "pic32mz unlock <bank>");
+		command_print(CMD, "pic32mz unlock <bank>");
 		return ERROR_COMMAND_SYNTAX_ERROR;
 	}
 
@@ -1107,7 +1105,7 @@ COMMAND_HANDLER(pic32mz_handle_unlock_command)
 	mips_ejtag_drscan_8(ejtag_info, &mchip_cmd);
 	if (mchip_cmd & (1 << 7)) {
 		/* device is not locked */
-		command_print(CMD_CTX, "pic32mz is already unlocked, erasing anyway");
+		command_print(CMD, "pic32mz is already unlocked, erasing anyway");
 	}
 
 	/* unlock/erase device */
@@ -1131,7 +1129,7 @@ COMMAND_HANDLER(pic32mz_handle_unlock_command)
 	/* select ejtag tap */
 	mips_ejtag_set_instr(ejtag_info, MTAP_SW_ETAP);
 
-	command_print(CMD_CTX, "pic32mz unlocked.\n"
+	command_print(CMD, "pic32mz unlocked.\n"
 			"INFO: a reset or power cycle is required "
 			"for the new settings to take effect.");
 
