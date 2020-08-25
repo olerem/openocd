@@ -852,7 +852,7 @@ static int pic32mz_write(struct flash_bank *bank, const uint8_t *buffer, uint32_
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	LOG_DEBUG("writing to flash at address 0x%08" PRIx32 " at offset 0x%8.8" PRIx32
+	LOG_DEBUG("writing to flash at address " TARGET_ADDR_FMT " at offset 0x%8.8" PRIx32
 			" count: 0x%8.8" PRIx32 "", bank->base, offset, count);
 
 	cfgcon_address = PIC32MZ_CFGCON;
@@ -1076,7 +1076,6 @@ COMMAND_HANDLER(pic32mz_handle_pgm_word_command)
 
 COMMAND_HANDLER(pic32mz_handle_unlock_command)
 {
-	uint32_t mchip_cmd;
 	struct target *target = NULL;
 	struct mips_m4k_common *mips_m4k;
 	struct mips_ejtag *ejtag_info;
@@ -1101,7 +1100,7 @@ COMMAND_HANDLER(pic32mz_handle_unlock_command)
 	mips_ejtag_set_instr(ejtag_info, MTAP_COMMAND);
 
 	/* first check status of device */
-	mchip_cmd = MCHP_STATUS;
+	uint8_t mchip_cmd = MCHP_STATUS;
 	mips_ejtag_drscan_8(ejtag_info, &mchip_cmd);
 	if (mchip_cmd & (1 << 7)) {
 		/* device is not locked */
