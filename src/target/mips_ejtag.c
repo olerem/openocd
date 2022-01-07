@@ -245,13 +245,16 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 
 	if (ejtag_info->ejtag_version == EJTAG_VERSION_20) {
-		if (disable_dcr_mp(ejtag_info) != ERROR_OK)
+		ret = disable_dcr_mp(ejtag_info);
+		if (ret != ERROR_OK)
 			goto error;
 	}
 
 	/* set debug break bit */
 	ejtag_ctrl = ejtag_info->ejtag_ctrl | EJTAG_CTRL_JTAGBRK;
-	mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
+	ret = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
+	if (ret != ERROR_OK)
+		goto error;
 
 	/* break bit will be cleared by hardware */
 	ejtag_ctrl = ejtag_info->ejtag_ctrl;
@@ -263,7 +266,7 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 	return ERROR_OK;
 error:
 	LOG_ERROR("Failed to enter Debug Mode!");
-	return ERROR_FAIL;
+	return ret;
 }
 
 int mips_ejtag_exit_debug(struct mips_ejtag *ejtag_info)
