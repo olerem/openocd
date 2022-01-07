@@ -24,6 +24,8 @@
 #include "config.h"
 #endif
 
+#include <helper/time_support.h>
+
 #include "mips32.h"
 #include "mips_ejtag.h"
 #include "mips32_dmaacc.h"
@@ -242,6 +244,8 @@ error:
 int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 {
 	uint32_t ejtag_ctrl;
+	int ret;
+
 	mips_ejtag_set_instr(ejtag_info, EJTAG_INST_CONTROL);
 
 	if (ejtag_info->ejtag_version == EJTAG_VERSION_20) {
@@ -258,10 +262,27 @@ int mips_ejtag_enter_debug(struct mips_ejtag *ejtag_info)
 
 	/* break bit will be cleared by hardware */
 	ejtag_ctrl = ejtag_info->ejtag_ctrl;
-	mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
-	LOG_DEBUG("ejtag_ctrl: 0x%8.8" PRIx32 "", ejtag_ctrl);
-	if ((ejtag_ctrl & EJTAG_CTRL_BRKST) == 0)
-		goto error;
+
+	int64_t then = timeval_ms();
+
+	/* Wait until debug mode bit is set */
+	while (true) {
+		ret = mips_ejtag_drscan_32(ejtag_info, &ejtag_ctrl);
+		if (ret != ERROR_OK)
+			goto error;
+
+		LOG_DEBUG("ejtag_ctrl: 0x%8.8" PRIx32 "", ejtag_ctrl);
+
+		if (ejtag_ctrl & EJTAG_CTRL_BRKST)
+			break;
+
+		int64_t timeout = timeval_ms() - then;
+		if (timeout > 1000) {
+			LOG_DEBUG("Waiting for ECR DM failed!");
+			ret = ERROR_JTAG_DEVICE_ERROR;
+			goto error;
+		}
+	}
 
 	return ERROR_OK;
 error:
